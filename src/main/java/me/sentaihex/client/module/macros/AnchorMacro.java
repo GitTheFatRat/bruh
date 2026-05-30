@@ -6,10 +6,11 @@ import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent;
 
 public class AnchorMacro extends ClientModule {
 
-    // Lưu dưới dạng jnativehook VC code (giống những gì GUI truyền vào setSlot*).
-    // nativeToWinVK() convert sang Win VK ngay trước khi gọi pressKey().
-    private int slotAnchor    = NativeKeyEvent.VC_X;
-    private int slotGlowstone = NativeKeyEvent.VC_C;
+    // Giá trị mặc định dùng raw VC code:
+    // Chữ cái: VC = ASCII uppercase (X=0x58, C=0x43)
+    // TAB: dùng NativeKeyEvent.VC_TAB (constant này có trong 2.2)
+    private int slotAnchor    = 0x58; // X
+    private int slotGlowstone = 0x43; // C
     private int slotTotem     = NativeKeyEvent.VC_TAB;
 
     private int delay1 = 20;

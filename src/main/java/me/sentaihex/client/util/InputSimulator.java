@@ -54,15 +54,18 @@ public class InputSimulator {
     }
 
     /**
-     * Convert jnativehook keycode (VC_*) → Windows Virtual Key.
+     * Convert jnativehook VC keycode → Windows Virtual Key code.
      *
-     * jnativehook trả về VC codes khi user rebind qua GUI.
-     * Tất cả slot macro phải gọi hàm này trước khi truyền vào pressKey().
-     *
-     * Chữ cái A-Z và số 0-9: VC code trùng với Win VK nên không cần map.
-     * Các phím đặc biệt có giá trị khác nhau giữa hai hệ → phải map tường minh.
+     * Quy tắc:
+     *  - Chữ cái A-Z: VC = ASCII uppercase = Win VK → pass-through
+     *  - Số 0-9: VC = ASCII digit = Win VK → pass-through
+     *  - Phím đặc biệt (F-keys, TAB, ALT...): VC khác Win VK → map tường minh
      */
     public static int nativeToWinVK(int vcCode) {
+        // Chữ cái A-Z (0x41–0x5A) và số 0-9 (0x30–0x39): trùng Win VK
+        if ((vcCode >= 0x41 && vcCode <= 0x5A) || (vcCode >= 0x30 && vcCode <= 0x39)) {
+            return vcCode;
+        }
         return switch (vcCode) {
             // --- Function keys ---
             case NativeKeyEvent.VC_F1  -> 0x70;
@@ -95,10 +98,10 @@ public class InputSimulator {
             case NativeKeyEvent.VC_RIGHT -> 0x27;
             case NativeKeyEvent.VC_DOWN  -> 0x28;
             // --- Modifier keys ---
-            case NativeKeyEvent.VC_SHIFT_L, NativeKeyEvent.VC_SHIFT_R   -> 0x10;
-            case NativeKeyEvent.VC_CONTROL_L, NativeKeyEvent.VC_CONTROL_R -> 0x11;
-            case NativeKeyEvent.VC_ALT_L, NativeKeyEvent.VC_ALT_R       -> 0x12;
-            // --- Chữ cái & số: VC == Win VK, trả thẳng ---
+            case NativeKeyEvent.VC_SHIFT   -> 0x10;
+            case NativeKeyEvent.VC_CONTROL -> 0x11;
+            case NativeKeyEvent.VC_ALT     -> 0x12;
+            // --- Fallback: trả nguyên, chấp nhận rủi ro với phím lạ ---
             default -> vcCode;
         };
     }

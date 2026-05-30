@@ -390,19 +390,26 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
 
         // Chế độ đang chờ gán phím bind
         if (listeningModule != null && listeningSlot != null && listeningBtn != null) {
+            // Capture và xóa ngay trên native thread để tránh race condition:
+            // nếu để null trong invokeLater (EDT), native thread có thể nhận thêm
+            // key event trước khi EDT chạy → phím sai bị capture vào slot bind.
+            final ClientModule capturedModule = listeningModule;
+            final String       capturedSlot   = listeningSlot;
+            final JButton      capturedBtn    = listeningBtn;
+            listeningModule = null;
+            listeningSlot   = null;
+            listeningBtn    = null;
+
             final String finalKeyText = formatKeyText(NativeKeyEvent.getKeyText(code));
             SwingUtilities.invokeLater(() -> {
-                if (listeningSlot.equals("mainBind")) {
-                    listeningModule.setKeybind(code);
+                if (capturedSlot.equals("mainBind")) {
+                    capturedModule.setKeybind(code);
                 } else {
-                    updateModuleSlotKey(listeningModule, listeningSlot, code);
+                    updateModuleSlotKey(capturedModule, capturedSlot, code);
                 }
-                listeningBtn.setText(finalKeyText);
-                listeningBtn.setForeground(ACCENT);
+                capturedBtn.setText(finalKeyText);
+                capturedBtn.setForeground(ACCENT);
                 SentaiHex.INSTANCE.configManager.save();
-                listeningModule = null;
-                listeningSlot   = null;
-                listeningBtn    = null;
             });
             return;
         }
