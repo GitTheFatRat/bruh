@@ -32,6 +32,9 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
     private JButton      listeningBtn    = null;
 
     private Point dragPoint = null;
+    // Timestamp khi GUI vừa mở — dùng để ignore key events ngay sau showGUI()
+    // tránh INSERT (dùng để mở GUI) bị capture nhầm vào slot bind
+    private volatile long guiOpenedAt = 0;
 
     public ClickGUI() {
         setTitle("SentaiHex Premium");
@@ -375,6 +378,7 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
     }
 
     private void showGUI() {
+        guiOpenedAt = System.currentTimeMillis();
         unlockMinecraftMouse();
         SwingUtilities.invokeLater(() -> { setVisible(true); toFront(); requestFocus(); });
     }
@@ -390,9 +394,13 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
 
         // Chế độ đang chờ gán phím bind
         if (listeningModule != null && listeningSlot != null && listeningBtn != null) {
-            // Capture và xóa ngay trên native thread để tránh race condition:
-            // nếu để null trong invokeLater (EDT), native thread có thể nhận thêm
-            // key event trước khi EDT chạy → phím sai bị capture vào slot bind.
+            // Bỏ qua nếu GUI vừa mới mở trong vòng 300ms — tránh INSERT key-repeat
+            // bị capture nhầm làm keybind ngay khi người dùng vừa nhấn INSERT để mở GUI
+            if (System.currentTimeMillis() - guiOpenedAt < 300) return;
+            // Bỏ qua các phím reserved (không cho bind)
+            if (code == NativeKeyEvent.VC_INSERT) return;
+
+            // Xóa ngay trên native thread để tránh race condition
             final ClientModule capturedModule = listeningModule;
             final String       capturedSlot   = listeningSlot;
             final JButton      capturedBtn    = listeningBtn;
