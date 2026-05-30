@@ -2,13 +2,15 @@ package me.sentaihex.client.module.macros;
 
 import me.sentaihex.client.module.ClientModule;
 import me.sentaihex.client.util.InputSimulator;
-import java.awt.event.KeyEvent;
+import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent;
 
 public class AnchorMacro extends ClientModule {
 
-    private int slotAnchor    = KeyEvent.VK_X;
-    private int slotGlowstone = KeyEvent.VK_C;
-    private int slotTotem     = KeyEvent.VK_TAB;
+    // Lưu dưới dạng jnativehook VC code (giống những gì GUI truyền vào setSlot*).
+    // nativeToWinVK() convert sang Win VK ngay trước khi gọi pressKey().
+    private int slotAnchor    = NativeKeyEvent.VC_X;
+    private int slotGlowstone = NativeKeyEvent.VC_C;
+    private int slotTotem     = NativeKeyEvent.VC_TAB;
 
     private int delay1 = 20;
     private int delay2 = 20;
@@ -23,20 +25,20 @@ public class AnchorMacro extends ClientModule {
 
     @Override
     public void execute() throws InterruptedException {
-        // Bước 1: chuyển sang slot Anchor → click phải đặt xuống
-        InputSimulator.pressKey(InputSimulator.toWinVK(slotAnchor));
+        // Bước 1: ấn phím Anchor slot → click phải đặt xuống
+        InputSimulator.pressKey(InputSimulator.nativeToWinVK(slotAnchor));
         if (delay1 > 0) Thread.sleep(delay1);
         InputSimulator.rightClick();
         if (delay1 > 0) Thread.sleep(delay1);
 
-        // Bước 2: chuyển sang slot Glowstone → click phải nạp vào anchor
-        InputSimulator.pressKey(InputSimulator.toWinVK(slotGlowstone));
+        // Bước 2: ấn phím Glowstone slot → click phải nạp vào anchor
+        InputSimulator.pressKey(InputSimulator.nativeToWinVK(slotGlowstone));
         if (delay2 > 0) Thread.sleep(delay2);
         InputSimulator.rightClick();
         if (delay2 > 0) Thread.sleep(delay2);
 
-        // Bước 3: chuyển sang slot Totem → click phải kích nổ
-        InputSimulator.pressKey(InputSimulator.toWinVK(slotTotem));
+        // Bước 3: ấn phím Totem slot → click phải kích nổ
+        InputSimulator.pressKey(InputSimulator.nativeToWinVK(slotTotem));
         if (delay3 > 0) Thread.sleep(delay3);
         InputSimulator.rightClick();
     }

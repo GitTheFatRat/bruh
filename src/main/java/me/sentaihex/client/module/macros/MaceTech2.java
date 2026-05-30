@@ -2,12 +2,12 @@ package me.sentaihex.client.module.macros;
 
 import me.sentaihex.client.module.ClientModule;
 import me.sentaihex.client.util.InputSimulator;
-import java.awt.event.KeyEvent;
+import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent;
 
 public class MaceTech2 extends ClientModule {
 
-    private int slotMace = KeyEvent.VK_V;
-    private int slotAxe  = KeyEvent.VK_Q;
+    private int slotMace = NativeKeyEvent.VC_V;
+    private int slotAxe  = NativeKeyEvent.VC_Q;
 
     private int delay1 = 100;
     private int delay2 = 80;
@@ -21,12 +21,13 @@ public class MaceTech2 extends ClientModule {
 
     @Override
     public void execute() throws InterruptedException {
-        InputSimulator.pressKey(InputSimulator.toWinVK(slotAxe));
+        // Stun Slam: Mace trước để slam xuống, rồi Axe follow-up
+        InputSimulator.pressKey(InputSimulator.nativeToWinVK(slotMace));
         Thread.sleep(delay1);
         InputSimulator.leftClick();
         Thread.sleep(50);
 
-        InputSimulator.pressKey(InputSimulator.toWinVK(slotMace));
+        InputSimulator.pressKey(InputSimulator.nativeToWinVK(slotAxe));
         Thread.sleep(delay2);
         InputSimulator.leftClick();
     }

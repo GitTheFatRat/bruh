@@ -2,13 +2,13 @@ package me.sentaihex.client.module.macros;
 
 import me.sentaihex.client.module.ClientModule;
 import me.sentaihex.client.util.InputSimulator;
-import java.awt.event.KeyEvent;
+import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent;
 
 public class TNTCartMacro extends ClientModule {
 
-    private int slotRail     = KeyEvent.VK_F12;
-    private int slotCart     = KeyEvent.VK_F9;
-    private int slotCrossbow = KeyEvent.VK_8;
+    private int slotRail     = NativeKeyEvent.VC_F12;
+    private int slotCart     = NativeKeyEvent.VC_F9;
+    private int slotCrossbow = NativeKeyEvent.VC_8;
 
     private int delay1 = 100;
     private int delay2 = 100;
@@ -23,17 +23,17 @@ public class TNTCartMacro extends ClientModule {
 
     @Override
     public void execute() throws InterruptedException {
-        InputSimulator.pressKey(InputSimulator.toWinVK(slotRail));
+        InputSimulator.pressKey(InputSimulator.nativeToWinVK(slotRail));
         Thread.sleep(delay1);
         InputSimulator.rightClick();
         Thread.sleep(50);
 
-        InputSimulator.pressKey(InputSimulator.toWinVK(slotCart));
+        InputSimulator.pressKey(InputSimulator.nativeToWinVK(slotCart));
         Thread.sleep(delay2);
         InputSimulator.rightClick();
         Thread.sleep(50);
 
-        InputSimulator.pressKey(InputSimulator.toWinVK(slotCrossbow));
+        InputSimulator.pressKey(InputSimulator.nativeToWinVK(slotCrossbow));
         Thread.sleep(delay3);
         InputSimulator.rightClick();
     }
