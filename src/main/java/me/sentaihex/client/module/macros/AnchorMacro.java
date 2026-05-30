@@ -1,111 +1,56 @@
 package me.sentaihex.client.module.macros;
 
 import me.sentaihex.client.module.ClientModule;
-import java.awt.Robot;
-import java.awt.event.InputEvent;
+import me.sentaihex.client.util.InputSimulator;
 import java.awt.event.KeyEvent;
 
 public class AnchorMacro extends ClientModule {
 
-    // Lưu mã phím hệ thống (Key Code từ ClickGUI của bạn, ví dụ: KeyEvent.VK_X)
-    private int slotAnchor    = KeyEvent.VK_X;   // Mặc định phím X
-    private int slotGlowstone = KeyEvent.VK_C;   // Mặc định phím C
-    private int slotTotem     = KeyEvent.VK_TAB; // Mặc định phím TAB
+    private int slotAnchor    = KeyEvent.VK_X;
+    private int slotGlowstone = KeyEvent.VK_C;
+    private int slotTotem     = KeyEvent.VK_TAB;
 
-    // Các biến delay (ms) giữa các hành động, chỉnh được trên GUI
     private int delay1 = 20;
     private int delay2 = 20;
     private int delay3 = 20;
 
-    private static Robot robot;
-
     public AnchorMacro() {
-        super("Anchor Bomb", "Macro", -1); // Phím kích hoạt chính (Bind)
-        try {
-            if (robot == null) {
-                robot = new Robot();
-            }
-        } catch (Exception e) {
-            System.err.println("[SentaiHex] Không thể khởi tạo Robot giả lập phím: " + e.getMessage());
-        }
+        super("Anchor Bomb", "Macro", -1);
     }
 
-    @Override
-    public void onEnable() {
-        // Chạy chuỗi giả lập phím trên một luồng riêng biệt để không làm đơ game/GUI
-        new Thread(() -> {
-            try {
-                execute();
-            } catch (InterruptedException ignored) {
-                Thread.currentThread().interrupt();
-            } catch (Exception e) {
-                System.err.println("[SentaiHex] Lỗi Macro: " + e.getMessage());
-            } finally {
-                setEnabled(false); // Chạy xong chuỗi tự động tắt nút gạt về OFF
-            }
-        }, "Anchor-Robot-Thread").start();
-    }
-
-    @Override public void onDisable() {}
+    @Override public void onEnable()  { System.out.println("[SentaiHex] AnchorMacro ON"); }
+    @Override public void onDisable() { System.out.println("[SentaiHex] AnchorMacro OFF"); }
 
     @Override
     public void execute() throws InterruptedException {
-        if (robot == null) return;
-
-        // --- BƯỚC 1: ẤN PHÍM ANCHOR + CLICK CHUỘT PHẢI ---
-        pressAndReleaseKey(slotAnchor);
+        // Bước 1: chuyển sang slot Anchor → click phải đặt xuống
+        InputSimulator.pressKey(InputSimulator.toWinVK(slotAnchor));
         if (delay1 > 0) Thread.sleep(delay1);
-        clickMouseRight();
+        InputSimulator.rightClick();
         if (delay1 > 0) Thread.sleep(delay1);
 
-        // --- BƯỚC 2: ẤN PHÍM GLOWSTONE + CLICK CHUỘT PHẢI ---
-        pressAndReleaseKey(slotGlowstone);
+        // Bước 2: chuyển sang slot Glowstone → click phải nạp vào anchor
+        InputSimulator.pressKey(InputSimulator.toWinVK(slotGlowstone));
         if (delay2 > 0) Thread.sleep(delay2);
-        clickMouseRight();
+        InputSimulator.rightClick();
         if (delay2 > 0) Thread.sleep(delay2);
 
-        // --- BƯỚC 3: ẤN PHÍM TOTEM + CLICK CHUỘT PHẢI ---
-        pressAndReleaseKey(slotTotem);
+        // Bước 3: chuyển sang slot Totem → click phải kích nổ
+        InputSimulator.pressKey(InputSimulator.toWinVK(slotTotem));
         if (delay3 > 0) Thread.sleep(delay3);
-        clickMouseRight();
+        InputSimulator.rightClick();
     }
 
-    /**
-     * Hàm phụ trợ giả lập hành động gõ phím (Nhấn xuống và Thả ra)
-     */
-    private void pressAndReleaseKey(int keyCode) {
-        try {
-            robot.keyPress(keyCode);
-            robot.keyRelease(keyCode);
-        } catch (Exception ignored) {}
-    }
-
-    /**
-     * Hàm phụ trợ giả lập click chuột phải
-     */
-    private void clickMouseRight() {
-        try {
-            robot.mousePress(InputEvent.BUTTON3_DOWN_MASK);
-            robot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK);
-        } catch (Exception ignored) {}
-    }
-
-    // --- GETTERS & SETTERS (Kết nối đồng bộ với ClickGUI và ConfigManager) ---
-    public int getSlotAnchor() { return slotAnchor; }
-    public void setSlotAnchor(int k) { this.slotAnchor = k; }
-
-    public int getSlotGlowstone() { return slotGlowstone; }
+    public int getSlotAnchor()          { return slotAnchor; }
+    public void setSlotAnchor(int k)    { this.slotAnchor = k; }
+    public int getSlotGlowstone()       { return slotGlowstone; }
     public void setSlotGlowstone(int k) { this.slotGlowstone = k; }
-
-    public int getSlotTotem() { return slotTotem; }
-    public void setSlotTotem(int k) { this.slotTotem = k; }
-
+    public int getSlotTotem()           { return slotTotem; }
+    public void setSlotTotem(int k)     { this.slotTotem = k; }
     public int getDelay1() { return delay1; }
     public void setDelay1(int d) { this.delay1 = d; }
-
     public int getDelay2() { return delay2; }
     public void setDelay2(int d) { this.delay2 = d; }
-
     public int getDelay3() { return delay3; }
     public void setDelay3(int d) { this.delay3 = d; }
 }

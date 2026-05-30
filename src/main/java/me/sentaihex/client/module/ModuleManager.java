@@ -31,16 +31,16 @@ public class ModuleManager implements NativeKeyListener {
 
     @Override
     public void nativeKeyPressed(NativeKeyEvent e) {
+        int code = e.getKeyCode();
         for (ClientModule m : modules) {
-            m.onKeyPress(e.getKeyCode());
+            // Mỗi module tự kiểm tra:
+            // - Nếu code là keybind (trigger) VÀ module đang ON → chạy combo
+            m.triggerIfEnabled(code);
         }
     }
 
-    @Override
-    public void nativeKeyReleased(NativeKeyEvent e) {}
-
-    @Override
-    public void nativeKeyTyped(NativeKeyEvent e) {}
+    @Override public void nativeKeyReleased(NativeKeyEvent e) {}
+    @Override public void nativeKeyTyped(NativeKeyEvent e) {}
 
     public List<ClientModule> getModules() { return modules; }
 

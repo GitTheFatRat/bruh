@@ -17,23 +17,20 @@ import java.lang.reflect.Method;
 
 public class ClickGUI extends JFrame implements NativeKeyListener {
 
-    // --- HỆ THỐNG MÀU SẮC PREMIUM CHUẨN XANH LỤC BẢO ---
-    private static final Color BG            = new Color(6, 36, 17);
-    private static final Color CARD_BG       = new Color(16, 56, 30);
-    private static final Color ACCENT        = new Color(212, 175, 55);
-    private static final Color TEXT_LIGHT    = new Color(240, 245, 242);
-    private static final Color MUTED         = new Color(135, 160, 145);
-    private static final Color BORDER        = new Color(25, 75, 45);
+    private static final Color BG         = new Color(6, 36, 17);
+    private static final Color CARD_BG    = new Color(16, 56, 30);
+    private static final Color ACCENT     = new Color(212, 175, 55);
+    private static final Color TEXT_LIGHT = new Color(240, 245, 242);
+    private static final Color MUTED      = new Color(135, 160, 145);
+    private static final Color BORDER     = new Color(25, 75, 45);
 
-    private static final int CORNER_RADIUS = 24;
-    private static final String FONT_NAME = "Segoe UI";
+    private static final int    CORNER_RADIUS = 24;
+    private static final String FONT_NAME     = "Segoe UI";
 
-    // --- BIẾN TRẠNG THÁI HỆ THỐNG ---
     private ClientModule listeningModule = null;
-    private String listeningSlot = null;
-    private JButton listeningBtn = null;
+    private String       listeningSlot   = null;
+    private JButton      listeningBtn    = null;
 
-    // Biến Instance lưu tọa độ chuột để kéo thả cửa sổ mượt mà không lỗi Lambda
     private Point dragPoint = null;
 
     public ClickGUI() {
@@ -42,21 +39,16 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(false);
-
-        // 🔥 SỬA LỖI: Bật tính năng không viền và ép nền cửa sổ gốc thành TRONG SUỐT HOÀN TOÀN
         setUndecorated(true);
         setBackground(new Color(0, 0, 0, 0));
         setAlwaysOnTop(true);
 
-        // Đảm bảo tầng ContentPane mặc định không tự vẽ đè màu nền trắng lên khung cửa sổ
-        if (getContentPane() instanceof JComponent) {
-            ((JComponent) getContentPane()).setOpaque(false);
+        if (getContentPane() instanceof JComponent jc) {
+            jc.setOpaque(false);
         }
 
-        // Thực hiện bo tròn góc cửa sổ bằng Shape cắt mượt
         addComponentListener(new ComponentAdapter() {
-            @Override
-            public void componentResized(ComponentEvent e) {
+            @Override public void componentResized(ComponentEvent e) {
                 setShape(new RoundRectangle2D.Double(0, 0, getWidth(), getHeight(), CORNER_RADIUS, CORNER_RADIUS));
             }
         });
@@ -65,19 +57,17 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
         GlobalScreen.addNativeKeyListener(this);
     }
 
-    // --- CƠ CHẾ CAN THIỆP CHUỘT MINECRAFT (REFLECTION) ---
+    // --- MINECRAFT MOUSE HELPER (REFLECTION) ---
     private Object getMinecraftMouseHelper() {
         try {
             Class<?> mcClass = Class.forName("net.minecraft.client.Minecraft");
             Object mc = mcClass.getMethod("getMinecraft").invoke(null);
             if (mc == null) return null;
-
             for (Field f : mcClass.getDeclaredFields()) {
                 f.setAccessible(true);
                 Object val = f.get(mc);
-                if (val != null && val.getClass().getSimpleName().toLowerCase().contains("mouse")) {
+                if (val != null && val.getClass().getSimpleName().toLowerCase().contains("mouse"))
                     return val;
-                }
             }
         } catch (Exception ignored) {}
         return null;
@@ -99,31 +89,29 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
     }
 
     private void unlockMinecraftMouse() { executeMouseAction("ungrab"); }
-    private void lockMinecraftMouse() { executeMouseAction("grab"); }
+    private void lockMinecraftMouse()   { executeMouseAction("grab"); }
 
     private boolean isMinecraftFocused() {
         try {
             Class<?> mcClass = Class.forName("net.minecraft.client.Minecraft");
             Object mc = mcClass.getMethod("getMinecraft").invoke(null);
             if (mc == null) return false;
-
             for (Field f : mcClass.getDeclaredFields()) {
                 f.setAccessible(true);
-                String name = f.getName().toLowerCase();
-                if (name.contains("ingamehasfocus") || name.contains("hasfocus") || name.contains("field_71415_x")) {
+                String fname = f.getName().toLowerCase();
+                if (fname.contains("ingamehasfocus") || fname.contains("hasfocus") || fname.contains("field_71415_x")) {
                     Object val = f.get(mc);
-                    if (val instanceof Boolean) return (Boolean) val;
+                    if (val instanceof Boolean b) return b;
                 }
             }
             Class<?> displayClass = Class.forName("org.lwjgl.opengl.Display");
-            Method isActive = displayClass.getMethod("isActive");
-            return (Boolean) isActive.invoke(null);
+            return (Boolean) displayClass.getMethod("isActive").invoke(null);
         } catch (Exception e) {
             return true;
         }
     }
 
-    // --- CÁC PHƯƠNG THỨC TRÍCH XUẤT XÂY DỰNG GIAO DIỆN CHUẨN CLEAN CODE ---
+    // --- PANEL BUILDER ---
     private JPanel createMainPanel() {
         JPanel mainPanel = createBackgroundPanel();
         mainPanel.add(createHeaderPanel(), BorderLayout.NORTH);
@@ -131,11 +119,9 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
         return mainPanel;
     }
 
-    // Tách riêng Panel đồ họa nền để bo góc mịn màng không lỗi hiển thị
     private JPanel createBackgroundPanel() {
         JPanel bgPanel = new JPanel(new BorderLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
+            @Override protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Graphics2D g2d = (Graphics2D) g.create();
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -148,7 +134,6 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
         return bgPanel;
     }
 
-    // Tách phần lưới phân bổ 4 cột chứa Macro
     private JPanel createContentGrid() {
         JPanel contentGrid = new JPanel(new GridLayout(1, 4, 20, 0));
         contentGrid.setOpaque(false);
@@ -158,10 +143,9 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
             contentGrid.add(createMacroCard(m));
         }
 
-        int loadedModules = SentaiHex.INSTANCE.moduleManager.getByCategory("Macro").size();
-        for (int i = loadedModules; i < 4; i++) {
-            contentGrid.add(createEmptyCard());
-        }
+        int loaded = SentaiHex.INSTANCE.moduleManager.getByCategory("Macro").size();
+        for (int i = loaded; i < 4; i++) contentGrid.add(createEmptyCard());
+
         return contentGrid;
     }
 
@@ -185,7 +169,6 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
         closeBtn.addActionListener(e -> hideGUI());
         header.add(closeBtn, BorderLayout.EAST);
 
-        // Logic kéo giữ tiêu đề di chuyển cửa sổ mượt mà
         header.addMouseListener(new MouseAdapter() {
             @Override public void mousePressed(MouseEvent e) { dragPoint = e.getPoint(); }
         });
@@ -224,8 +207,7 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
 
     private JPanel createCardContainer() {
         JPanel container = new JPanel(new BorderLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
+            @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D) g.create();
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2d.setColor(CARD_BG);
@@ -240,6 +222,7 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
         return container;
     }
 
+    // [FIX #3] Label đúng với slot mapping trong getModuleSlotKey / updateModuleSlotKey
     private void buildCardBodySlots(ClientModule m, JPanel body) {
         if (m instanceof AnchorMacro) {
             body.add(createSlotRow(m, "slot1", "Anchor"));
@@ -247,24 +230,25 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
             body.add(createSlotRow(m, "slot3", "Totem"));
         } else if (m instanceof TNTCartMacro) {
             body.add(createSlotRow(m, "slot1", "Rail"));
-            body.add(createSlotRow(m, "slot2", "Tnt"));
-            body.add(createSlotRow(m, "slot3", "Cb"));
+            body.add(createSlotRow(m, "slot2", "Cart"));   // Fix: "Tnt" → "Cart" cho đúng nghĩa
+            body.add(createSlotRow(m, "slot3", "Crossbow"));
         } else if (m instanceof MaceTech1) {
-            body.add(createSlotRow(m, "slot1", "Mace"));
+            body.add(createSlotRow(m, "slot1", "Pearl"));      // [FIX #3] slot1 = Pearl (không phải Mace)
             body.add(createSlotRow(m, "slot2", "Wind"));
         } else if (m instanceof MaceTech2) {
-            body.add(createSlotRow(m, "slot1", "Mace"));
+            body.add(createSlotRow(m, "slot1", "Mace"));       // [FIX #3] slot1 = Mace, slot2 = Axe
             body.add(createSlotRow(m, "slot2", "Axe"));
         }
     }
 
     private JLabel createNameLabel(ClientModule m) {
-        String displayName = m.getName();
-        if (displayName.equalsIgnoreCase("Anchor Bomb")) displayName = "Respawn Anchor";
-        if (displayName.equalsIgnoreCase("TNT Cart")) displayName = "Tnt cart";
-        if (displayName.equalsIgnoreCase("Mace Tech 1 (Pearl+Wind)")) displayName = "cc";
-        if (displayName.equalsIgnoreCase("Mace Tech 2 (Stun Slam)")) displayName = "Stun slam";
-
+        String displayName = switch (m.getName()) {
+            case "Anchor Bomb"              -> "Respawn Anchor";
+            case "TNT Cart"                 -> "TNT Cart";
+            case "Mace Tech 1 (Pearl+Wind)" -> "Pearl + Wind";
+            case "Mace Tech 2 (Stun Slam)"  -> "Stun Slam";
+            default                         -> m.getName();
+        };
         JLabel nameLabel = new JLabel(displayName, SwingConstants.CENTER);
         nameLabel.setFont(new Font(FONT_NAME, Font.BOLD, 13));
         nameLabel.setForeground(TEXT_LIGHT);
@@ -293,8 +277,7 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
 
     private JButton createBindButton(ClientModule module, String slotName) {
         int currentKey = slotName.equals("mainBind") ? module.getKeybind() : getModuleSlotKey(module, slotName);
-        String keyText = (currentKey == -1) ? "..." : NativeKeyEvent.getKeyText(currentKey);
-        if (keyText.length() > 5) keyText = keyText.substring(0, 4) + ".";
+        String keyText = formatKeyText(currentKey == -1 ? "..." : NativeKeyEvent.getKeyText(currentKey));
 
         JButton btn = new JButton(keyText);
         btn.setFont(new Font(FONT_NAME, Font.BOLD, 12));
@@ -306,8 +289,8 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
 
         btn.addActionListener(e -> {
             listeningModule = module;
-            listeningSlot = slotName;
-            listeningBtn = btn;
+            listeningSlot   = slotName;
+            listeningBtn    = btn;
             btn.setText(">>>");
             btn.setForeground(Color.RED);
         });
@@ -319,25 +302,15 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
         container.setOpaque(false);
 
         JButton switchBtn = new JButton() {
-            @Override
-            protected void paintComponent(Graphics g) {
+            @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2d = (Graphics2D) g.create();
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                if (m.isEnabled()) {
-                    g2d.setColor(ACCENT);
-                } else {
-                    g2d.setColor(new Color(10, 30, 15));
-                }
+                g2d.setColor(m.isEnabled() ? ACCENT : new Color(10, 30, 15));
                 g2d.fillRoundRect(0, 0, getWidth(), getHeight(), getHeight(), getHeight());
-
                 g2d.setColor(TEXT_LIGHT);
                 int knobSize = getHeight() - 6;
-                if (m.isEnabled()) {
-                    g2d.fillOval(getWidth() - knobSize - 3, 3, knobSize, knobSize);
-                } else {
-                    g2d.fillOval(3, 3, knobSize, knobSize);
-                }
+                if (m.isEnabled()) g2d.fillOval(getWidth() - knobSize - 3, 3, knobSize, knobSize);
+                else               g2d.fillOval(3, 3, knobSize, knobSize);
                 g2d.dispose();
             }
         };
@@ -352,6 +325,14 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
                 m.toggle();
                 switchBtn.repaint();
                 SentaiHex.INSTANCE.configManager.save();
+            }
+        });
+
+        // [FIX #2] Lắng nghe PropertyChange từ module — khi thread macro gọi setEnabled(false),
+        // GUI sẽ tự repaint switch về trạng thái OFF mà không cần can thiệp thủ công
+        m.addPropertyChangeListener(evt -> {
+            if ("enabled".equals(evt.getPropertyName())) {
+                SwingUtilities.invokeLater(switchBtn::repaint);
             }
         });
 
@@ -403,46 +384,39 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
         lockMinecraftMouse();
     }
 
-    // --- SỰ KIỆN KHÓA PHÍM & KÍCH HOẠT THỰC THI (FIXED LAMBDA FINAL ERROR) ---
     @Override
     public void nativeKeyPressed(NativeKeyEvent e) {
         int code = e.getKeyCode();
 
+        // Chế độ đang chờ gán phím bind
         if (listeningModule != null && listeningSlot != null && listeningBtn != null) {
-            int keyCode = e.getKeyCode();
-            String rawText = NativeKeyEvent.getKeyText(keyCode);
-
-            // Xử lý tối ưu chuỗi văn bản hoàn chỉnh từ ngoài rìa Lambda thành hằng số hiệu dụng
-            final String finalKeyText = (rawText.length() > 5) ? rawText.substring(0, 4) + "." : rawText;
-
+            final String finalKeyText = formatKeyText(NativeKeyEvent.getKeyText(code));
             SwingUtilities.invokeLater(() -> {
                 if (listeningSlot.equals("mainBind")) {
-                    listeningModule.setKeybind(keyCode);
+                    listeningModule.setKeybind(code);
                 } else {
-                    updateModuleSlotKey(listeningModule, listeningSlot, keyCode);
+                    updateModuleSlotKey(listeningModule, listeningSlot, code);
                 }
                 listeningBtn.setText(finalKeyText);
                 listeningBtn.setForeground(ACCENT);
                 SentaiHex.INSTANCE.configManager.save();
-                listeningModule = null; listeningSlot = null; listeningBtn = null;
+                listeningModule = null;
+                listeningSlot   = null;
+                listeningBtn    = null;
             });
             return;
         }
 
+        // INSERT: mở/đóng GUI
         if (code == NativeKeyEvent.VC_INSERT) {
             if (isVisible()) hideGUI(); else showGUI();
             return;
         }
 
-        if (!isMinecraftFocused()) return;
-
+        // Trigger combo nếu module đang ON — ModuleManager xử lý, GUI không can thiệp
+        // (ClickGUI cũng là NativeKeyListener nên phải forward xuống ModuleManager)
         for (ClientModule m : SentaiHex.INSTANCE.moduleManager.getModules()) {
-            if (m.getKeybind() == code && m.getKeybind() != -1) {
-                new Thread(() -> {
-                    try { m.execute(); }
-                    catch (InterruptedException ignored) {}
-                }).start();
-            }
+            m.triggerIfEnabled(code);
         }
     }
 
@@ -450,30 +424,35 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
         switch (slot) {
             case "slot1" -> {
                 switch (module) {
-                    case AnchorMacro m -> m.setSlotAnchor(keyCode);
+                    case AnchorMacro  m -> m.setSlotAnchor(keyCode);
                     case TNTCartMacro m -> m.setSlotRail(keyCode);
-                    case MaceTech1 m -> m.setSlotPearl(keyCode);
-                    case MaceTech2 m -> m.setSlotMace(keyCode);
+                    case MaceTech1    m -> m.setSlotPearl(keyCode);
+                    case MaceTech2    m -> m.setSlotMace(keyCode);
                     default -> {}
                 }
             }
             case "slot2" -> {
                 switch (module) {
-                    case AnchorMacro m -> m.setSlotGlowstone(keyCode);
+                    case AnchorMacro  m -> m.setSlotGlowstone(keyCode);
                     case TNTCartMacro m -> m.setSlotCart(keyCode);
-                    case MaceTech1 m -> m.setSlotWindCharge(keyCode);
-                    case MaceTech2 m -> m.setSlotAxe(keyCode);
+                    case MaceTech1    m -> m.setSlotWindCharge(keyCode);
+                    case MaceTech2    m -> m.setSlotAxe(keyCode);
                     default -> {}
                 }
             }
             case "slot3" -> {
                 switch (module) {
-                    case AnchorMacro m -> m.setSlotTotem(keyCode);
+                    case AnchorMacro  m -> m.setSlotTotem(keyCode);
                     case TNTCartMacro m -> m.setSlotCrossbow(keyCode);
                     default -> {}
                 }
             }
         }
+    }
+
+    // Helper: cắt ngắn text key nếu quá dài để hiển thị gọn trên button
+    private String formatKeyText(String raw) {
+        return (raw.length() > 5) ? raw.substring(0, 4) + "." : raw;
     }
 
     @Override public void nativeKeyReleased(NativeKeyEvent e) {}
