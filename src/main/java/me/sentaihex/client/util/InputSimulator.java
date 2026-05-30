@@ -54,19 +54,52 @@ public class InputSimulator {
     }
 
     /**
-     * Convert jnativehook VC keycode → Windows Virtual Key code.
+     * Convert jnativehook VC scan code → Windows Virtual Key code.
      *
-     * Quy tắc:
-     *  - Chữ cái A-Z: VC = ASCII uppercase = Win VK → pass-through
-     *  - Số 0-9: VC = ASCII digit = Win VK → pass-through
-     *  - Phím đặc biệt (F-keys, TAB, ALT...): VC khác Win VK → map tường minh
+     * jnativehook dùng scan code kiểu PS/2 (KHÔNG phải ASCII, KHÔNG phải AWT keycode).
+     * Ví dụ: VC_2 = 0x0003, VC_X = 0x002D, VC_C = 0x002E — hoàn toàn khác ASCII.
+     * Mọi phím đều phải map tường minh.
      */
     public static int nativeToWinVK(int vcCode) {
-        // Chữ cái A-Z (0x41–0x5A) và số 0-9 (0x30–0x39): trùng Win VK
-        if ((vcCode >= 0x41 && vcCode <= 0x5A) || (vcCode >= 0x30 && vcCode <= 0x39)) {
-            return vcCode;
-        }
         return switch (vcCode) {
+            // --- Số ---
+            case NativeKeyEvent.VC_0 -> 0x30;
+            case NativeKeyEvent.VC_1 -> 0x31;
+            case NativeKeyEvent.VC_2 -> 0x32;
+            case NativeKeyEvent.VC_3 -> 0x33;
+            case NativeKeyEvent.VC_4 -> 0x34;
+            case NativeKeyEvent.VC_5 -> 0x35;
+            case NativeKeyEvent.VC_6 -> 0x36;
+            case NativeKeyEvent.VC_7 -> 0x37;
+            case NativeKeyEvent.VC_8 -> 0x38;
+            case NativeKeyEvent.VC_9 -> 0x39;
+            // --- Chữ cái A-Z ---
+            case NativeKeyEvent.VC_A -> 0x41;
+            case NativeKeyEvent.VC_B -> 0x42;
+            case NativeKeyEvent.VC_C -> 0x43;
+            case NativeKeyEvent.VC_D -> 0x44;
+            case NativeKeyEvent.VC_E -> 0x45;
+            case NativeKeyEvent.VC_F -> 0x46;
+            case NativeKeyEvent.VC_G -> 0x47;
+            case NativeKeyEvent.VC_H -> 0x48;
+            case NativeKeyEvent.VC_I -> 0x49;
+            case NativeKeyEvent.VC_J -> 0x4A;
+            case NativeKeyEvent.VC_K -> 0x4B;
+            case NativeKeyEvent.VC_L -> 0x4C;
+            case NativeKeyEvent.VC_M -> 0x4D;
+            case NativeKeyEvent.VC_N -> 0x4E;
+            case NativeKeyEvent.VC_O -> 0x4F;
+            case NativeKeyEvent.VC_P -> 0x50;
+            case NativeKeyEvent.VC_Q -> 0x51;
+            case NativeKeyEvent.VC_R -> 0x52;
+            case NativeKeyEvent.VC_S -> 0x53;
+            case NativeKeyEvent.VC_T -> 0x54;
+            case NativeKeyEvent.VC_U -> 0x55;
+            case NativeKeyEvent.VC_V -> 0x56;
+            case NativeKeyEvent.VC_W -> 0x57;
+            case NativeKeyEvent.VC_X -> 0x58;
+            case NativeKeyEvent.VC_Y -> 0x59;
+            case NativeKeyEvent.VC_Z -> 0x5A;
             // --- Function keys ---
             case NativeKeyEvent.VC_F1  -> 0x70;
             case NativeKeyEvent.VC_F2  -> 0x71;
@@ -80,28 +113,26 @@ public class InputSimulator {
             case NativeKeyEvent.VC_F10 -> 0x79;
             case NativeKeyEvent.VC_F11 -> 0x7A;
             case NativeKeyEvent.VC_F12 -> 0x7B;
-            // --- Navigation / editing ---
+            // --- Phím đặc biệt ---
+            case NativeKeyEvent.VC_ESCAPE    -> 0x1B;
             case NativeKeyEvent.VC_TAB       -> 0x09;
             case NativeKeyEvent.VC_ENTER     -> 0x0D;
-            case NativeKeyEvent.VC_ESCAPE    -> 0x1B;
-            case NativeKeyEvent.VC_SPACE     -> 0x20;
             case NativeKeyEvent.VC_BACKSPACE -> 0x08;
-            case NativeKeyEvent.VC_DELETE    -> 0x2E;
+            case NativeKeyEvent.VC_SPACE     -> 0x20;
             case NativeKeyEvent.VC_INSERT    -> 0x2D;
+            case NativeKeyEvent.VC_DELETE    -> 0x2E;
             case NativeKeyEvent.VC_HOME      -> 0x24;
             case NativeKeyEvent.VC_END       -> 0x23;
             case NativeKeyEvent.VC_PAGE_UP   -> 0x21;
             case NativeKeyEvent.VC_PAGE_DOWN -> 0x22;
-            // --- Arrow keys ---
-            case NativeKeyEvent.VC_LEFT  -> 0x25;
-            case NativeKeyEvent.VC_UP    -> 0x26;
-            case NativeKeyEvent.VC_RIGHT -> 0x27;
-            case NativeKeyEvent.VC_DOWN  -> 0x28;
-            // --- Modifier keys ---
+            case NativeKeyEvent.VC_LEFT      -> 0x25;
+            case NativeKeyEvent.VC_UP        -> 0x26;
+            case NativeKeyEvent.VC_RIGHT     -> 0x27;
+            case NativeKeyEvent.VC_DOWN      -> 0x28;
+            // --- Modifier ---
             case NativeKeyEvent.VC_SHIFT   -> 0x10;
             case NativeKeyEvent.VC_CONTROL -> 0x11;
             case NativeKeyEvent.VC_ALT     -> 0x12;
-            // --- Fallback: trả nguyên, chấp nhận rủi ro với phím lạ ---
             default -> vcCode;
         };
     }

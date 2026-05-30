@@ -8,7 +8,7 @@ public class TNTCartMacro extends ClientModule {
 
     private int slotRail     = NativeKeyEvent.VC_F12;
     private int slotCart     = NativeKeyEvent.VC_F9;
-    private int slotCrossbow = 0x38; // 8
+    private int slotCrossbow = NativeKeyEvent.VC_8;
 
     private int delay1 = 100;
     private int delay2 = 100;

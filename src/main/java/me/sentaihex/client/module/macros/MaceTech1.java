@@ -6,7 +6,7 @@ import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent;
 
 public class MaceTech1 extends ClientModule {
 
-    private int slotPearl      = 0x56; // V
+    private int slotPearl      = NativeKeyEvent.VC_V;
     private int slotWindCharge = NativeKeyEvent.VC_ALT;
 
     private int delay1 = 150;

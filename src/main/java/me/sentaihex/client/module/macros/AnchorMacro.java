@@ -6,11 +6,8 @@ import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent;
 
 public class AnchorMacro extends ClientModule {
 
-    // Giá trị mặc định dùng raw VC code:
-    // Chữ cái: VC = ASCII uppercase (X=0x58, C=0x43)
-    // TAB: dùng NativeKeyEvent.VC_TAB (constant này có trong 2.2)
-    private int slotAnchor    = 0x58; // X
-    private int slotGlowstone = 0x43; // C
+    private int slotAnchor    = NativeKeyEvent.VC_X;
+    private int slotGlowstone = NativeKeyEvent.VC_C;
     private int slotTotem     = NativeKeyEvent.VC_TAB;
 
     private int delay1 = 20;
@@ -26,19 +23,16 @@ public class AnchorMacro extends ClientModule {
 
     @Override
     public void execute() throws InterruptedException {
-        // Bước 1: ấn phím Anchor slot → click phải đặt xuống
         InputSimulator.pressKey(InputSimulator.nativeToWinVK(slotAnchor));
         if (delay1 > 0) Thread.sleep(delay1);
         InputSimulator.rightClick();
         if (delay1 > 0) Thread.sleep(delay1);
 
-        // Bước 2: ấn phím Glowstone slot → click phải nạp vào anchor
         InputSimulator.pressKey(InputSimulator.nativeToWinVK(slotGlowstone));
         if (delay2 > 0) Thread.sleep(delay2);
         InputSimulator.rightClick();
         if (delay2 > 0) Thread.sleep(delay2);
 
-        // Bước 3: ấn phím Totem slot → click phải kích nổ
         InputSimulator.pressKey(InputSimulator.nativeToWinVK(slotTotem));
         if (delay3 > 0) Thread.sleep(delay3);
         InputSimulator.rightClick();
