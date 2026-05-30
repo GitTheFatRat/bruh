@@ -7,94 +7,105 @@ import java.awt.event.KeyEvent;
 
 public class AnchorMacro extends ClientModule {
 
-    private Robot robot;
-    private int slotAnchor    = KeyEvent.VK_X;
-    private int slotGlowstone = KeyEvent.VK_C;
-    private int slotTotem     = KeyEvent.VK_TAB;
+    // Lưu mã phím hệ thống (Key Code từ ClickGUI của bạn, ví dụ: KeyEvent.VK_X)
+    private int slotAnchor    = KeyEvent.VK_X;   // Mặc định phím X
+    private int slotGlowstone = KeyEvent.VK_C;   // Mặc định phím C
+    private int slotTotem     = KeyEvent.VK_TAB; // Mặc định phím TAB
 
-    // Giữ nguyên tên biến cũ để ConfigManager không bị lỗi "cannot find symbol"
-    private int delay1 = 180; // Dùng làm switchDelay (thời gian chờ đổi item)
-    private int delay2 = 80;  // Dùng làm clickDelay (thời gian chờ sau khi click)
-    private int delay3 = 35;  // Dùng làm holdDelay (thời gian giữ phím bấm)
+    // Các biến delay (ms) giữa các hành động, chỉnh được trên GUI
+    private int delay1 = 20;
+    private int delay2 = 20;
+    private int delay3 = 20;
+
+    private static Robot robot;
 
     public AnchorMacro() {
-        super("Anchor Bomb", "Macro", -1);
+        super("Anchor Bomb", "Macro", -1); // Phím kích hoạt chính (Bind)
         try {
-            this.robot = new Robot();
+            if (robot == null) {
+                robot = new Robot();
+            }
         } catch (Exception e) {
-            System.err.println("Robot could not be initialized: " + e.getMessage());
+            System.err.println("[SentaiHex] Không thể khởi tạo Robot giả lập phím: " + e.getMessage());
         }
     }
 
     @Override
     public void onEnable() {
-        if (robot == null) {
-            setEnabled(false);
-            return;
-        }
+        // Chạy chuỗi giả lập phím trên một luồng riêng biệt để không làm đơ game/GUI
         new Thread(() -> {
             try {
                 execute();
-            }
-            catch (InterruptedException ignored) {
+            } catch (InterruptedException ignored) {
                 Thread.currentThread().interrupt();
+            } catch (Exception e) {
+                System.err.println("[SentaiHex] Lỗi Macro: " + e.getMessage());
+            } finally {
+                setEnabled(false); // Chạy xong chuỗi tự động tắt nút gạt về OFF
             }
-            finally {
-                setEnabled(false);
-            }
-        }, "Anchor-Thread").start();
+        }, "Anchor-Robot-Thread").start();
     }
 
-    @Override
-    public void onDisable() {
-        // No behavior needed on disable
-    }
+    @Override public void onDisable() {}
 
     @Override
     public void execute() throws InterruptedException {
         if (robot == null) return;
 
-        // BƯỚC 1: Chọn Anchor -> Đặt xuống
-        pressKey(slotAnchor);
-        Thread.sleep(delay1); // Chờ đổi sang Anchor
-        rightClick();
-        Thread.sleep(delay2); // Chờ đặt xong
+        // --- BƯỚC 1: ẤN PHÍM ANCHOR + CLICK CHUỘT PHẢI ---
+        pressAndReleaseKey(slotAnchor);
+        if (delay1 > 0) Thread.sleep(delay1);
+        clickMouseRight();
+        if (delay1 > 0) Thread.sleep(delay1);
 
-        // BƯỚC 2: Chọn Glowstone -> Nạp điện
-        pressKey(slotGlowstone);
-        Thread.sleep(delay1); // Chờ đổi hẳn sang Glowstone để KHÔNG bị đặt 2 lần Anchor
-        rightClick();
-        Thread.sleep(delay2); // Chờ nạp xong
+        // --- BƯỚC 2: ẤN PHÍM GLOWSTONE + CLICK CHUỘT PHẢI ---
+        pressAndReleaseKey(slotGlowstone);
+        if (delay2 > 0) Thread.sleep(delay2);
+        clickMouseRight();
+        if (delay2 > 0) Thread.sleep(delay2);
 
-        // BƯỚC 3: Chọn Totem -> Click kích nổ
-        pressKey(slotTotem);
-        Thread.sleep(delay1); // Chờ đổi sang Totem
-        rightClick();
+        // --- BƯỚC 3: ẤN PHÍM TOTEM + CLICK CHUỘT PHẢI ---
+        pressAndReleaseKey(slotTotem);
+        if (delay3 > 0) Thread.sleep(delay3);
+        clickMouseRight();
     }
 
-    private void pressKey(int key) throws InterruptedException {
-        robot.keyPress(key);
-        Thread.sleep(delay3); // Thời gian giữ phím xuống
-        robot.keyRelease(key);
+    /**
+     * Hàm phụ trợ giả lập hành động gõ phím (Nhấn xuống và Thả ra)
+     */
+    private void pressAndReleaseKey(int keyCode) {
+        try {
+            robot.keyPress(keyCode);
+            robot.keyRelease(keyCode);
+        } catch (Exception ignored) {}
     }
 
-    private void rightClick() throws InterruptedException {
-        robot.mousePress(InputEvent.BUTTON3_DOWN_MASK);
-        Thread.sleep(delay3); // Thời gian giữ chuột xuống
-        robot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK);
+    /**
+     * Hàm phụ trợ giả lập click chuột phải
+     */
+    private void clickMouseRight() {
+        try {
+            robot.mousePress(InputEvent.BUTTON3_DOWN_MASK);
+            robot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK);
+        } catch (Exception ignored) {}
     }
 
-    // --- GIỮ NGUYÊN HOÀN TOÀN GETTERS & SETTERS CŨ CHO CONFIG MANAGER ---
+    // --- GETTERS & SETTERS (Kết nối đồng bộ với ClickGUI và ConfigManager) ---
     public int getSlotAnchor() { return slotAnchor; }
     public void setSlotAnchor(int k) { this.slotAnchor = k; }
+
     public int getSlotGlowstone() { return slotGlowstone; }
     public void setSlotGlowstone(int k) { this.slotGlowstone = k; }
+
     public int getSlotTotem() { return slotTotem; }
     public void setSlotTotem(int k) { this.slotTotem = k; }
+
     public int getDelay1() { return delay1; }
     public void setDelay1(int d) { this.delay1 = d; }
+
     public int getDelay2() { return delay2; }
     public void setDelay2(int d) { this.delay2 = d; }
+
     public int getDelay3() { return delay3; }
     public void setDelay3(int d) { this.delay3 = d; }
 }

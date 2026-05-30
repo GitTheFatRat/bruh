@@ -11,414 +11,467 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.geom.RoundRectangle2D;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
 public class ClickGUI extends JFrame implements NativeKeyListener {
 
-    private static final Color BG        = new Color(13, 17, 23);
-    private static final Color PANEL_BG  = new Color(20, 26, 36);
-    private static final Color HEADER_BG = new Color(16, 21, 30);
-    private static final Color ACCENT    = new Color(0, 200, 120);
-    private static final Color RED       = new Color(220, 60, 80);
-    private static final Color YELLOW    = new Color(220, 180, 50);
-    private static final Color TEXT      = new Color(220, 230, 240);
-    private static final Color MUTED     = new Color(100, 110, 125);
-    private static final Color BORDER    = new Color(30, 38, 52);
+    // --- HỆ THỐNG MÀU SẮC PREMIUM CHUẨN XANH LỤC BẢO ---
+    private static final Color BG            = new Color(6, 36, 17);
+    private static final Color CARD_BG       = new Color(16, 56, 30);
+    private static final Color ACCENT        = new Color(212, 175, 55);
+    private static final Color TEXT_LIGHT    = new Color(240, 245, 242);
+    private static final Color MUTED         = new Color(135, 160, 145);
+    private static final Color BORDER        = new Color(25, 75, 45);
 
-    // ✅ Keybind listener state
+    private static final int CORNER_RADIUS = 24;
+    private static final String FONT_NAME = "Segoe UI";
+
+    // --- BIẾN TRẠNG THÁI HỆ THỐNG ---
     private ClientModule listeningModule = null;
-    private String listeningSlot = null; // "macro", "slot1", "slot2", "slot3"
+    private String listeningSlot = null;
     private JButton listeningBtn = null;
 
+    // Biến Instance lưu tọa độ chuột để kéo thả cửa sổ mượt mà không lỗi Lambda
+    private Point dragPoint = null;
+
     public ClickGUI() {
-        setTitle("SentaiHex");
-        setSize(500, 580);
-        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
+        setTitle("SentaiHex Premium");
+        setSize(850, 480);
+        setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
         setLocationRelativeTo(null);
+        setResizable(false);
+
+        // 🔥 SỬA LỖI: Bật tính năng không viền và ép nền cửa sổ gốc thành TRONG SUỐT HOÀN TOÀN
         setUndecorated(true);
+        setBackground(new Color(0, 0, 0, 0));
         setAlwaysOnTop(true);
 
-        JPanel root = new JPanel(new BorderLayout());
-        root.setBackground(BG);
-        root.setBorder(BorderFactory.createLineBorder(new Color(0, 200, 120, 80), 1));
-
-        root.add(makeTitleBar(), BorderLayout.NORTH);
-
-        JPanel content = new JPanel();
-        content.setBackground(BG);
-        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setBorder(new EmptyBorder(10, 12, 10, 12));
-
-        for (ClientModule m : SentaiHex.INSTANCE.moduleManager.getModules()) {
-            content.add(buildCard(m));
-            content.add(Box.createVerticalStrut(8));
+        // Đảm bảo tầng ContentPane mặc định không tự vẽ đè màu nền trắng lên khung cửa sổ
+        if (getContentPane() instanceof JComponent) {
+            ((JComponent) getContentPane()).setOpaque(false);
         }
 
-        JScrollPane scroll = new JScrollPane(content);
-        scroll.setBorder(null);
-        scroll.setBackground(BG);
-        scroll.getViewport().setBackground(BG);
-        scroll.getVerticalScrollBar().setUnitIncrement(14);
+        // Thực hiện bo tròn góc cửa sổ bằng Shape cắt mượt
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                setShape(new RoundRectangle2D.Double(0, 0, getWidth(), getHeight(), CORNER_RADIUS, CORNER_RADIUS));
+            }
+        });
 
-        root.add(scroll, BorderLayout.CENTER);
-        root.add(makeFooter(), BorderLayout.SOUTH);
-        setContentPane(root);
-
+        setContentPane(createMainPanel());
         GlobalScreen.addNativeKeyListener(this);
     }
 
-    // ==================== TITLE BAR ====================
-    private JPanel makeTitleBar() {
-        JPanel bar = new JPanel(new BorderLayout());
-        bar.setBackground(HEADER_BG);
-        bar.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER),
-                new EmptyBorder(10, 14, 10, 12)
-        ));
+    // --- CƠ CHẾ CAN THIỆP CHUỘT MINECRAFT (REFLECTION) ---
+    private Object getMinecraftMouseHelper() {
+        try {
+            Class<?> mcClass = Class.forName("net.minecraft.client.Minecraft");
+            Object mc = mcClass.getMethod("getMinecraft").invoke(null);
+            if (mc == null) return null;
 
-        JLabel title = new JLabel("  SentaiHex  //  Macro Panel");
-        title.setFont(new Font("Courier New", Font.BOLD, 13));
-        title.setForeground(ACCENT);
+            for (Field f : mcClass.getDeclaredFields()) {
+                f.setAccessible(true);
+                Object val = f.get(mc);
+                if (val != null && val.getClass().getSimpleName().toLowerCase().contains("mouse")) {
+                    return val;
+                }
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
 
-        JButton closeBtn = new JButton("  ✕  ");
-        closeBtn.setFont(new Font("Arial", Font.PLAIN, 12));
-        closeBtn.setForeground(MUTED);
-        closeBtn.setBackground(HEADER_BG);
-        closeBtn.setBorder(BorderFactory.createEmptyBorder(2, 6, 2, 6));
-        closeBtn.setFocusPainted(false);
-        closeBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        closeBtn.addMouseListener(new MouseAdapter() {
-            public void mouseEntered(MouseEvent e) { closeBtn.setForeground(RED); }
-            public void mouseExited(MouseEvent e) { closeBtn.setForeground(MUTED); }
-        });
-        closeBtn.addActionListener(e -> setVisible(false));
+    private void executeMouseAction(String keyword) {
+        Object mouseHelper = getMinecraftMouseHelper();
+        if (mouseHelper == null) return;
+        try {
+            for (Method method : mouseHelper.getClass().getDeclaredMethods()) {
+                method.setAccessible(true);
+                String name = method.getName().toLowerCase();
+                if (name.contains(keyword) && method.getParameterCount() == 0) {
+                    method.invoke(mouseHelper);
+                    break;
+                }
+            }
+        } catch (Exception ignored) {}
+    }
 
-        bar.add(title, BorderLayout.WEST);
-        bar.add(closeBtn, BorderLayout.EAST);
+    private void unlockMinecraftMouse() { executeMouseAction("ungrab"); }
+    private void lockMinecraftMouse() { executeMouseAction("grab"); }
 
-        MouseAdapter drag = new MouseAdapter() {
-            Point start;
-            public void mousePressed(MouseEvent e) { start = e.getPoint(); }
-            public void mouseDragged(MouseEvent e) {
-                Point loc = getLocation();
-                setLocation(loc.x + e.getX() - start.x, loc.y + e.getY() - start.y);
+    private boolean isMinecraftFocused() {
+        try {
+            Class<?> mcClass = Class.forName("net.minecraft.client.Minecraft");
+            Object mc = mcClass.getMethod("getMinecraft").invoke(null);
+            if (mc == null) return false;
+
+            for (Field f : mcClass.getDeclaredFields()) {
+                f.setAccessible(true);
+                String name = f.getName().toLowerCase();
+                if (name.contains("ingamehasfocus") || name.contains("hasfocus") || name.contains("field_71415_x")) {
+                    Object val = f.get(mc);
+                    if (val instanceof Boolean) return (Boolean) val;
+                }
+            }
+            Class<?> displayClass = Class.forName("org.lwjgl.opengl.Display");
+            Method isActive = displayClass.getMethod("isActive");
+            return (Boolean) isActive.invoke(null);
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
+    // --- CÁC PHƯƠNG THỨC TRÍCH XUẤT XÂY DỰNG GIAO DIỆN CHUẨN CLEAN CODE ---
+    private JPanel createMainPanel() {
+        JPanel mainPanel = createBackgroundPanel();
+        mainPanel.add(createHeaderPanel(), BorderLayout.NORTH);
+        mainPanel.add(createContentGrid(), BorderLayout.CENTER);
+        return mainPanel;
+    }
+
+    // Tách riêng Panel đồ họa nền để bo góc mịn màng không lỗi hiển thị
+    private JPanel createBackgroundPanel() {
+        JPanel bgPanel = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2d.setColor(BG);
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), CORNER_RADIUS, CORNER_RADIUS);
+                g2d.dispose();
             }
         };
-        bar.addMouseListener(drag);
-        bar.addMouseMotionListener(drag);
-        return bar;
+        bgPanel.setOpaque(false);
+        return bgPanel;
     }
 
-    // ==================== FOOTER ====================
-    private JPanel makeFooter() {
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 6));
-        footer.setBackground(HEADER_BG);
-        footer.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, BORDER));
-        JLabel hint = new JLabel("INSERT = an/hien GUI   |   Click [SET KEY] de doi phim");
-        hint.setFont(new Font("Courier New", Font.PLAIN, 10));
-        hint.setForeground(MUTED);
-        footer.add(hint);
-        return footer;
-    }
+    // Tách phần lưới phân bổ 4 cột chứa Macro
+    private JPanel createContentGrid() {
+        JPanel contentGrid = new JPanel(new GridLayout(1, 4, 20, 0));
+        contentGrid.setOpaque(false);
+        contentGrid.setBorder(new EmptyBorder(10, 25, 25, 25));
 
-    // ==================== MODULE CARD ====================
-    private JPanel buildCard(ClientModule module) {
-        JPanel card = new JPanel();
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBackground(PANEL_BG);
-        card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(BORDER, 1),
-                new EmptyBorder(0, 0, 8, 0)
-        ));
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 9999));
-
-        // Header
-        card.add(makeCardHeader(module));
-
-        // Divider
-        JSeparator sep = new JSeparator();
-        sep.setForeground(BORDER);
-        sep.setBackground(BORDER);
-        sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
-        card.add(sep);
-
-        // Body
-        JPanel body = new JPanel();
-        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
-        body.setBackground(PANEL_BG);
-        body.setBorder(new EmptyBorder(8, 14, 4, 14));
-
-        // Macro keybind
-        body.add(makeKeyRow("Macro Key:", module, "macro", module.getKeybind()));
-        body.add(Box.createVerticalStrut(6));
-
-        // Slot keybinds + delays tùy loại
-        if (module instanceof AnchorMacro m) {
-            body.add(makeSectionLabel("SLOTS"));
-            body.add(makeKeyRow("Anchor slot:", m, "slot1", m.getSlotAnchor()));
-            body.add(Box.createVerticalStrut(4));
-            body.add(makeKeyRow("Glowstone slot:", m, "slot2", m.getSlotGlowstone()));
-            body.add(Box.createVerticalStrut(4));
-            body.add(makeKeyRow("Totem slot:", m, "slot3", m.getSlotTotem()));
-            body.add(Box.createVerticalStrut(8));
-            body.add(makeSectionLabel("DELAYS"));
-            body.add(makeDelayRow("Anchor -> Glowstone:", m.getDelay1(), m::setDelay1));
-            body.add(Box.createVerticalStrut(4));
-            body.add(makeDelayRow("Glowstone -> Totem:", m.getDelay2(), m::setDelay2));
-            body.add(Box.createVerticalStrut(4));
-            body.add(makeDelayRow("Totem -> End:", m.getDelay3(), m::setDelay3));
-
-        } else if (module instanceof TNTCartMacro m) {
-            body.add(makeSectionLabel("SLOTS"));
-            body.add(makeKeyRow("Rail slot:", m, "slot1", m.getSlotRail()));
-            body.add(Box.createVerticalStrut(4));
-            body.add(makeKeyRow("TNT Cart slot:", m, "slot2", m.getSlotCart()));
-            body.add(Box.createVerticalStrut(4));
-            body.add(makeKeyRow("Crossbow slot:", m, "slot3", m.getSlotCrossbow()));
-            body.add(Box.createVerticalStrut(8));
-            body.add(makeSectionLabel("DELAYS"));
-            body.add(makeDelayRow("Rail -> Cart:", m.getDelay1(), m::setDelay1));
-            body.add(Box.createVerticalStrut(4));
-            body.add(makeDelayRow("Cart -> Crossbow:", m.getDelay2(), m::setDelay2));
-            body.add(Box.createVerticalStrut(4));
-            body.add(makeDelayRow("Crossbow -> End:", m.getDelay3(), m::setDelay3));
-
-        } else if (module instanceof MaceTech1 m) {
-            body.add(makeSectionLabel("SLOTS"));
-            body.add(makeKeyRow("Pearl slot:", m, "slot1", m.getSlotPearl()));
-            body.add(Box.createVerticalStrut(4));
-            body.add(makeKeyRow("Wind Charge slot:", m, "slot2", m.getSlotWindCharge()));
-            body.add(Box.createVerticalStrut(8));
-            body.add(makeSectionLabel("DELAYS"));
-            body.add(makeDelayRow("Pearl -> Wind:", m.getDelay1(), m::setDelay1));
-            body.add(Box.createVerticalStrut(4));
-            body.add(makeDelayRow("Wind -> End:", m.getDelay2(), m::setDelay2));
-
-        } else if (module instanceof MaceTech2 m) {
-            body.add(makeSectionLabel("SLOTS"));
-            body.add(makeKeyRow("Axe slot:", m, "slot1", m.getSlotAxe()));
-            body.add(Box.createVerticalStrut(4));
-            body.add(makeKeyRow("Mace slot:", m, "slot2", m.getSlotMace()));
-            body.add(Box.createVerticalStrut(8));
-            body.add(makeSectionLabel("DELAYS"));
-            body.add(makeDelayRow("Axe -> Mace:", m.getDelay1(), m::setDelay1));
-            body.add(Box.createVerticalStrut(4));
-            body.add(makeDelayRow("Mace -> End:", m.getDelay2(), m::setDelay2));
+        for (ClientModule m : SentaiHex.INSTANCE.moduleManager.getByCategory("Macro")) {
+            contentGrid.add(createMacroCard(m));
         }
 
-        card.add(body);
-        return card;
+        int loadedModules = SentaiHex.INSTANCE.moduleManager.getByCategory("Macro").size();
+        for (int i = loadedModules; i < 4; i++) {
+            contentGrid.add(createEmptyCard());
+        }
+        return contentGrid;
     }
 
-    // ==================== CARD HEADER ====================
-    private JPanel makeCardHeader(ClientModule module) {
-        JPanel header = new JPanel(new BorderLayout(8, 0));
-        header.setBackground(HEADER_BG);
-        header.setBorder(new EmptyBorder(10, 14, 10, 14));
+    private JPanel createHeaderPanel() {
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
+        header.setPreferredSize(new Dimension(850, 65));
 
-        JLabel name = new JLabel(module.getName());
-        name.setFont(new Font("Courier New", Font.BOLD, 13));
-        name.setForeground(TEXT);
+        JLabel title = new JLabel("🔱 Thượng đỉnh, thượng hạng 🔱", SwingConstants.CENTER);
+        title.setFont(new Font(FONT_NAME, Font.BOLD, 18));
+        title.setForeground(ACCENT);
+        header.add(title, BorderLayout.CENTER);
 
-        // RUN button
-        JButton runBtn = new JButton("  RUN  ");
-        runBtn.setFont(new Font("Courier New", Font.BOLD, 11));
-        runBtn.setForeground(ACCENT);
-        runBtn.setBackground(new Color(0, 200, 120, 18));
-        runBtn.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(0, 200, 120, 100), 1),
-                new EmptyBorder(4, 10, 4, 10)
-        ));
-        runBtn.setFocusPainted(false);
-        runBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        runBtn.addMouseListener(new MouseAdapter() {
-            public void mouseEntered(MouseEvent e) { runBtn.setBackground(new Color(0, 200, 120, 35)); }
-            public void mouseExited(MouseEvent e) { runBtn.setBackground(new Color(0, 200, 120, 18)); }
+        JButton closeBtn = new JButton("✕ ");
+        closeBtn.setFont(new Font(FONT_NAME, Font.PLAIN, 16));
+        closeBtn.setForeground(MUTED);
+        closeBtn.setContentAreaFilled(false);
+        closeBtn.setBorderPainted(false);
+        closeBtn.setFocusPainted(false);
+        closeBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        closeBtn.addActionListener(e -> hideGUI());
+        header.add(closeBtn, BorderLayout.EAST);
+
+        // Logic kéo giữ tiêu đề di chuyển cửa sổ mượt mà
+        header.addMouseListener(new MouseAdapter() {
+            @Override public void mousePressed(MouseEvent e) { dragPoint = e.getPoint(); }
         });
-        runBtn.addActionListener(e -> {
-            if (runBtn.isEnabled()) {
-                runBtn.setText(" ... ");
-                runBtn.setEnabled(false);
-                new Thread(() -> {
-                    try { module.execute(); }
-                    catch (InterruptedException ignored) {}
-                    finally {
-                        SwingUtilities.invokeLater(() -> {
-                            runBtn.setText("  RUN  ");
-                            runBtn.setEnabled(true);
-                        });
-                    }
-                }).start();
+        header.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override public void mouseDragged(MouseEvent e) {
+                if (dragPoint != null) {
+                    Point p = e.getLocationOnScreen();
+                    setLocation(p.x - dragPoint.x, p.y - dragPoint.y);
+                }
             }
         });
 
-        header.add(name, BorderLayout.WEST);
-        header.add(runBtn, BorderLayout.EAST);
         return header;
     }
 
-    // ==================== SECTION LABEL ====================
-    private JLabel makeSectionLabel(String text) {
-        JLabel label = new JLabel(text);
-        label.setFont(new Font("Courier New", Font.BOLD, 10));
-        label.setForeground(MUTED);
-        label.setAlignmentX(Component.LEFT_ALIGNMENT);
-        label.setBorder(new EmptyBorder(4, 0, 4, 0));
-        return label;
+    private JPanel createMacroCard(ClientModule m) {
+        JPanel card = createCardContainer();
+
+        JPanel body = new JPanel();
+        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+        body.setOpaque(false);
+
+        buildCardBodySlots(m, body);
+        body.add(createSlotRow(m, "mainBind", "Bind"));
+        card.add(body, BorderLayout.CENTER);
+
+        JPanel footer = new JPanel(new BorderLayout());
+        footer.setOpaque(false);
+        footer.setBorder(new EmptyBorder(10, 0, 0, 0));
+        footer.add(createNameLabel(m), BorderLayout.NORTH);
+        footer.add(createToggleSwitch(m), BorderLayout.SOUTH);
+
+        card.add(footer, BorderLayout.SOUTH);
+        return card;
     }
 
-    // ==================== KEY ROW ====================
-    private JPanel makeKeyRow(String labelText, ClientModule module, String slot, int currentKey) {
-        JPanel row = new JPanel(new BorderLayout(6, 0));
-        row.setBackground(PANEL_BG);
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
-        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+    private JPanel createCardContainer() {
+        JPanel container = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2d.setColor(CARD_BG);
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
+                g2d.setColor(BORDER);
+                g2d.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 20, 20);
+                g2d.dispose();
+            }
+        };
+        container.setOpaque(false);
+        container.setBorder(new EmptyBorder(15, 12, 15, 12));
+        return container;
+    }
 
-        JLabel label = new JLabel(labelText);
-        label.setFont(new Font("Courier New", Font.PLAIN, 11));
-        label.setForeground(MUTED);
-        label.setPreferredSize(new Dimension(140, 20));
+    private void buildCardBodySlots(ClientModule m, JPanel body) {
+        if (m instanceof AnchorMacro) {
+            body.add(createSlotRow(m, "slot1", "Anchor"));
+            body.add(createSlotRow(m, "slot2", "Glow"));
+            body.add(createSlotRow(m, "slot3", "Totem"));
+        } else if (m instanceof TNTCartMacro) {
+            body.add(createSlotRow(m, "slot1", "Rail"));
+            body.add(createSlotRow(m, "slot2", "Tnt"));
+            body.add(createSlotRow(m, "slot3", "Cb"));
+        } else if (m instanceof MaceTech1) {
+            body.add(createSlotRow(m, "slot1", "Mace"));
+            body.add(createSlotRow(m, "slot2", "Wind"));
+        } else if (m instanceof MaceTech2) {
+            body.add(createSlotRow(m, "slot1", "Mace"));
+            body.add(createSlotRow(m, "slot2", "Axe"));
+        }
+    }
 
-        String keyName = currentKey == -1 ? "NONE" : KeyEvent.getKeyText(currentKey);
-        JButton keyBtn = makeSmallBtn("[" + keyName + "]", YELLOW);
-        keyBtn.setPreferredSize(new Dimension(100, 24));
+    private JLabel createNameLabel(ClientModule m) {
+        String displayName = m.getName();
+        if (displayName.equalsIgnoreCase("Anchor Bomb")) displayName = "Respawn Anchor";
+        if (displayName.equalsIgnoreCase("TNT Cart")) displayName = "Tnt cart";
+        if (displayName.equalsIgnoreCase("Mace Tech 1 (Pearl+Wind)")) displayName = "cc";
+        if (displayName.equalsIgnoreCase("Mace Tech 2 (Stun Slam)")) displayName = "Stun slam";
 
-        keyBtn.addActionListener(e -> {
-            listeningModule = module;
-            listeningSlot = slot;
-            listeningBtn = keyBtn;
-            keyBtn.setText("[Press...]");
-            keyBtn.setForeground(RED);
-        });
+        JLabel nameLabel = new JLabel(displayName, SwingConstants.CENTER);
+        nameLabel.setFont(new Font(FONT_NAME, Font.BOLD, 13));
+        nameLabel.setForeground(TEXT_LIGHT);
+        return nameLabel;
+    }
 
-        row.add(label, BorderLayout.WEST);
-        row.add(keyBtn, BorderLayout.EAST);
+    private JPanel createSlotRow(ClientModule module, String slotName, String labelText) {
+        JPanel row = new JPanel(new BorderLayout());
+        row.setOpaque(false);
+        row.setMaximumSize(new Dimension(200, 32));
+        row.setBorder(new EmptyBorder(4, 0, 4, 0));
+
+        JLabel nameLbl = new JLabel(labelText);
+        nameLbl.setFont(new Font(FONT_NAME, Font.PLAIN, 13));
+        nameLbl.setForeground(TEXT_LIGHT);
+        row.add(nameLbl, BorderLayout.WEST);
+
+        JLabel dots = new JLabel(" .........................", SwingConstants.CENTER);
+        dots.setFont(new Font(FONT_NAME, Font.PLAIN, 10));
+        dots.setForeground(new Color(25, 85, 45));
+        row.add(dots, BorderLayout.CENTER);
+
+        row.add(createBindButton(module, slotName), BorderLayout.EAST);
         return row;
     }
 
-    // ==================== DELAY ROW ====================
-    interface IntSetter { void set(int v); }
+    private JButton createBindButton(ClientModule module, String slotName) {
+        int currentKey = slotName.equals("mainBind") ? module.getKeybind() : getModuleSlotKey(module, slotName);
+        String keyText = (currentKey == -1) ? "..." : NativeKeyEvent.getKeyText(currentKey);
+        if (keyText.length() > 5) keyText = keyText.substring(0, 4) + ".";
 
-    private JPanel makeDelayRow(String labelText, int current, IntSetter setter) {
-        JPanel row = new JPanel(new BorderLayout(6, 0));
-        row.setBackground(PANEL_BG);
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
-        row.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel label = new JLabel(labelText);
-        label.setFont(new Font("Courier New", Font.PLAIN, 11));
-        label.setForeground(MUTED);
-        label.setPreferredSize(new Dimension(140, 20));
-
-        // Right side: [ - ] [ 100ms ] [ + ]
-        JPanel controls = new JPanel(new FlowLayout(FlowLayout.RIGHT, 3, 0));
-        controls.setBackground(PANEL_BG);
-
-        JLabel valLabel = new JLabel(current + "ms");
-        valLabel.setFont(new Font("Courier New", Font.BOLD, 11));
-        valLabel.setForeground(ACCENT);
-        valLabel.setPreferredSize(new Dimension(55, 20));
-        valLabel.setHorizontalAlignment(SwingConstants.CENTER);
-
-        int[] val = {current};
-
-        JButton minus = makeSmallBtn(" - ", MUTED);
-        JButton plus  = makeSmallBtn(" + ", MUTED);
-
-        minus.addActionListener(e -> {
-            val[0] = Math.max(0, val[0] - 10);
-            valLabel.setText(val[0] + "ms");
-            setter.set(val[0]);
-            SentaiHex.INSTANCE.configManager.save();
-        });
-        plus.addActionListener(e -> {
-            val[0] = Math.min(1000, val[0] + 10);
-            valLabel.setText(val[0] + "ms");
-            setter.set(val[0]);
-            SentaiHex.INSTANCE.configManager.save();
-        });
-
-        controls.add(minus);
-        controls.add(valLabel);
-        controls.add(plus);
-
-        row.add(label, BorderLayout.WEST);
-        row.add(controls, BorderLayout.EAST);
-        return row;
-    }
-
-    private JButton makeSmallBtn(String text, Color color) {
-        JButton btn = new JButton(text);
-        btn.setFont(new Font("Courier New", Font.PLAIN, 10));
-        btn.setForeground(color);
-        btn.setBackground(HEADER_BG);
-        btn.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(color.getRed(), color.getGreen(), color.getBlue(), 80), 1),
-                new EmptyBorder(2, 6, 2, 6)
-        ));
+        JButton btn = new JButton(keyText);
+        btn.setFont(new Font(FONT_NAME, Font.BOLD, 12));
+        btn.setForeground(ACCENT);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
         btn.setFocusPainted(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        btn.addActionListener(e -> {
+            listeningModule = module;
+            listeningSlot = slotName;
+            listeningBtn = btn;
+            btn.setText(">>>");
+            btn.setForeground(Color.RED);
+        });
         return btn;
     }
 
-    // ==================== KEY LISTENER ====================
+    private JComponent createToggleSwitch(ClientModule m) {
+        JPanel container = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 5));
+        container.setOpaque(false);
+
+        JButton switchBtn = new JButton() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                if (m.isEnabled()) {
+                    g2d.setColor(ACCENT);
+                } else {
+                    g2d.setColor(new Color(10, 30, 15));
+                }
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), getHeight(), getHeight());
+
+                g2d.setColor(TEXT_LIGHT);
+                int knobSize = getHeight() - 6;
+                if (m.isEnabled()) {
+                    g2d.fillOval(getWidth() - knobSize - 3, 3, knobSize, knobSize);
+                } else {
+                    g2d.fillOval(3, 3, knobSize, knobSize);
+                }
+                g2d.dispose();
+            }
+        };
+        switchBtn.setPreferredSize(new Dimension(46, 22));
+        switchBtn.setContentAreaFilled(false);
+        switchBtn.setBorderPainted(false);
+        switchBtn.setFocusPainted(false);
+        switchBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        switchBtn.addActionListener(e -> {
+            if (isMinecraftFocused()) {
+                m.toggle();
+                switchBtn.repaint();
+                SentaiHex.INSTANCE.configManager.save();
+            }
+        });
+
+        container.add(switchBtn);
+        return container;
+    }
+
+    private JPanel createEmptyCard() {
+        JPanel card = new JPanel();
+        card.setOpaque(false);
+        return card;
+    }
+
+    private int getModuleSlotKey(ClientModule module, String slotName) {
+        return switch (module) {
+            case AnchorMacro m -> switch (slotName) {
+                case "slot1" -> m.getSlotAnchor();
+                case "slot2" -> m.getSlotGlowstone();
+                case "slot3" -> m.getSlotTotem();
+                default -> -1;
+            };
+            case TNTCartMacro m -> switch (slotName) {
+                case "slot1" -> m.getSlotRail();
+                case "slot2" -> m.getSlotCart();
+                case "slot3" -> m.getSlotCrossbow();
+                default -> -1;
+            };
+            case MaceTech1 m -> switch (slotName) {
+                case "slot1" -> m.getSlotPearl();
+                case "slot2" -> m.getSlotWindCharge();
+                default -> -1;
+            };
+            case MaceTech2 m -> switch (slotName) {
+                case "slot1" -> m.getSlotMace();
+                case "slot2" -> m.getSlotAxe();
+                default -> -1;
+            };
+            default -> -1;
+        };
+    }
+
+    private void showGUI() {
+        unlockMinecraftMouse();
+        SwingUtilities.invokeLater(() -> { setVisible(true); toFront(); requestFocus(); });
+    }
+
+    private void hideGUI() {
+        SwingUtilities.invokeLater(() -> setVisible(false));
+        lockMinecraftMouse();
+    }
+
+    // --- SỰ KIỆN KHÓA PHÍM & KÍCH HOẠT THỰC THI (FIXED LAMBDA FINAL ERROR) ---
     @Override
     public void nativeKeyPressed(NativeKeyEvent e) {
         int code = e.getKeyCode();
 
-        // INSERT toggle GUI
-        if (code == NativeKeyEvent.VC_INSERT) {
-            SwingUtilities.invokeLater(() -> {
-                if (isVisible()) setVisible(false);
-                else { setVisible(true); toFront(); }
-            });
-            return;
-        }
+        if (listeningModule != null && listeningSlot != null && listeningBtn != null) {
+            int keyCode = e.getKeyCode();
+            String rawText = NativeKeyEvent.getKeyText(keyCode);
 
-        // ✅ Đang chờ keybind
-        if (listeningModule != null && listeningBtn != null) {
-            final int keyCode = code;
-            final String keyText = NativeKeyEvent.getKeyText(code);
+            // Xử lý tối ưu chuỗi văn bản hoàn chỉnh từ ngoài rìa Lambda thành hằng số hiệu dụng
+            final String finalKeyText = (rawText.length() > 5) ? rawText.substring(0, 4) + "." : rawText;
 
             SwingUtilities.invokeLater(() -> {
-                // Gán key cho đúng slot
-                switch (listeningSlot) {
-                    case "macro" -> listeningModule.setKeybind(keyCode);
-                    case "slot1" -> {
-                        if (listeningModule instanceof AnchorMacro m) m.setSlotAnchor(keyCode);
-                        else if (listeningModule instanceof TNTCartMacro m) m.setSlotRail(keyCode);
-                        else if (listeningModule instanceof MaceTech1 m) m.setSlotPearl(keyCode);
-                        else if (listeningModule instanceof MaceTech2 m) m.setSlotAxe(keyCode);
-                    }
-                    case "slot2" -> {
-                        if (listeningModule instanceof AnchorMacro m) m.setSlotGlowstone(keyCode);
-                        else if (listeningModule instanceof TNTCartMacro m) m.setSlotCart(keyCode);
-                        else if (listeningModule instanceof MaceTech1 m) m.setSlotWindCharge(keyCode);
-                        else if (listeningModule instanceof MaceTech2 m) m.setSlotMace(keyCode);
-                    }
-                    case "slot3" -> {
-                        if (listeningModule instanceof AnchorMacro m) m.setSlotTotem(keyCode);
-                        else if (listeningModule instanceof TNTCartMacro m) m.setSlotCrossbow(keyCode);
-                    }
+                if (listeningSlot.equals("mainBind")) {
+                    listeningModule.setKeybind(keyCode);
+                } else {
+                    updateModuleSlotKey(listeningModule, listeningSlot, keyCode);
                 }
-                listeningBtn.setText("[" + keyText + "]");
-                listeningBtn.setForeground(YELLOW);
+                listeningBtn.setText(finalKeyText);
+                listeningBtn.setForeground(ACCENT);
                 SentaiHex.INSTANCE.configManager.save();
-
-                listeningModule = null;
-                listeningSlot = null;
-                listeningBtn = null;
+                listeningModule = null; listeningSlot = null; listeningBtn = null;
             });
             return;
         }
 
-        // ✅ Trigger macro qua keybind CHỈ khi GUI đang mở
-        if (!isVisible()) return;
+        if (code == NativeKeyEvent.VC_INSERT) {
+            if (isVisible()) hideGUI(); else showGUI();
+            return;
+        }
+
+        if (!isMinecraftFocused()) return;
+
         for (ClientModule m : SentaiHex.INSTANCE.moduleManager.getModules()) {
-            if (m.getKeybind() == code) {
+            if (m.getKeybind() == code && m.getKeybind() != -1) {
                 new Thread(() -> {
                     try { m.execute(); }
                     catch (InterruptedException ignored) {}
                 }).start();
+            }
+        }
+    }
+
+    private void updateModuleSlotKey(ClientModule module, String slot, int keyCode) {
+        switch (slot) {
+            case "slot1" -> {
+                switch (module) {
+                    case AnchorMacro m -> m.setSlotAnchor(keyCode);
+                    case TNTCartMacro m -> m.setSlotRail(keyCode);
+                    case MaceTech1 m -> m.setSlotPearl(keyCode);
+                    case MaceTech2 m -> m.setSlotMace(keyCode);
+                    default -> {}
+                }
+            }
+            case "slot2" -> {
+                switch (module) {
+                    case AnchorMacro m -> m.setSlotGlowstone(keyCode);
+                    case TNTCartMacro m -> m.setSlotCart(keyCode);
+                    case MaceTech1 m -> m.setSlotWindCharge(keyCode);
+                    case MaceTech2 m -> m.setSlotAxe(keyCode);
+                    default -> {}
+                }
+            }
+            case "slot3" -> {
+                switch (module) {
+                    case AnchorMacro m -> m.setSlotTotem(keyCode);
+                    case TNTCartMacro m -> m.setSlotCrossbow(keyCode);
+                    default -> {}
+                }
             }
         }
     }
