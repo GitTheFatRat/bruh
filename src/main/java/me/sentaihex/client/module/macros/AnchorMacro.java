@@ -10,9 +10,9 @@ public class AnchorMacro extends ClientModule {
     private int slotGlowstone = NativeKeyEvent.VC_C;
     private int slotTotem     = NativeKeyEvent.VC_TAB;
 
-    private int delay1 = 20;
-    private int delay2 = 20;
-    private int delay3 = 20;
+    private int delay1 = 36;
+    private int delay2 = 36;
+    private int delay3 = 36;
 
     public AnchorMacro() {
         super("Anchor Bomb", "Macro", -1);
