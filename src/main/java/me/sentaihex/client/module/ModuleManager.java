@@ -5,7 +5,6 @@ import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent;
 import com.github.kwhat.jnativehook.keyboard.NativeKeyListener;
 import me.sentaihex.client.module.macros.AnchorMacro;
 import me.sentaihex.client.module.macros.MaceTech1;
-import me.sentaihex.client.module.macros.MaceTech2;
 import me.sentaihex.client.module.macros.TNTCartMacro;
 
 import java.util.ArrayList;
@@ -19,7 +18,6 @@ public class ModuleManager implements NativeKeyListener {
         register(new AnchorMacro());
         register(new TNTCartMacro());
         register(new MaceTech1());
-        register(new MaceTech2());
 
         GlobalScreen.addNativeKeyListener(this);
         System.out.println("[SentaiHex] ModuleManager loaded " + modules.size() + " modules");

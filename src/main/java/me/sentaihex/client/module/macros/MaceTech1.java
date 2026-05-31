@@ -9,8 +9,8 @@ public class MaceTech1 extends ClientModule {
     private int slotPearl      = NativeKeyEvent.VC_V;
     private int slotWindCharge = NativeKeyEvent.VC_ALT;
 
-    private int delay1 = 30;  // giảm từ 150 → 30ms
-    private int delay2 = 25;  // giảm từ 100 → 25ms
+    private int delay1 = 55;
+    private int delay2 = 55;
 
     public MaceTech1() {
         super("Mace Tech 1 (Pearl+Wind)", "Macro", -1);
@@ -21,18 +21,19 @@ public class MaceTech1 extends ClientModule {
 
     @Override
     public void execute() throws InterruptedException {
-        // Pearl
-        InputSimulator.keyDown(InputSimulator.nativeToWinVK(slotPearl));
-        Thread.sleep(delay1);
-        InputSimulator.rightClick();
-        InputSimulator.keyUp(InputSimulator.nativeToWinVK(slotPearl));
+        InputSimulator.pressKeyThenRightClick(InputSimulator.nativeToWinVK(slotPearl));
         Thread.sleep(delay1);
 
-        // Wind Charge
-        InputSimulator.keyDown(InputSimulator.nativeToWinVK(slotWindCharge));
+        InputSimulator.pressKeyThenRightClick(InputSimulator.nativeToWinVK(slotWindCharge));
         Thread.sleep(delay2);
-        InputSimulator.rightClick();
-        InputSimulator.keyUp(InputSimulator.nativeToWinVK(slotWindCharge));
+    }
+
+    @Override
+    public void setDelay(int ms) {
+        int safe = Math.max(50, ms);
+        setGlobalDelay(safe);
+        this.delay1 = safe;
+        this.delay2 = safe;
     }
 
     public int getSlotPearl()            { return slotPearl; }
@@ -40,7 +41,7 @@ public class MaceTech1 extends ClientModule {
     public int getSlotWindCharge()       { return slotWindCharge; }
     public void setSlotWindCharge(int k) { this.slotWindCharge = k; }
     public int getDelay1() { return delay1; }
-    public void setDelay1(int d) { this.delay1 = d; }
+    public void setDelay1(int d) { this.delay1 = Math.max(50, d); }
     public int getDelay2() { return delay2; }
-    public void setDelay2(int d) { this.delay2 = d; }
+    public void setDelay2(int d) { this.delay2 = Math.max(50, d); }
 }
