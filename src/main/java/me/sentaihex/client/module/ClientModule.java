@@ -4,6 +4,7 @@ import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent;
 
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public abstract class ClientModule {
 
@@ -15,8 +16,9 @@ public abstract class ClientModule {
     private int globalDelay = 100;        // Delay mặc định
     private int[] stepDelays;
 
-    // Chống chạy đè
-    private volatile boolean running = false;
+    // [FIX #2] Dùng AtomicBoolean thay volatile boolean để check+set atomic,
+    // tránh race condition khi 2 key event đến gần nhau cùng lúc
+    private final AtomicBoolean running = new AtomicBoolean(false);
 
     private final PropertyChangeSupport pcs = new PropertyChangeSupport(this);
 
@@ -30,19 +32,29 @@ public abstract class ClientModule {
     public abstract void onDisable();
     public abstract void execute() throws InterruptedException;
 
+    // [FIX #1] toggle() cũ: setEnabled() fire PropertyChangeListener trước,
+    // sau đó mới gọi onEnable/onDisable → GUI nhận sự kiện khi module chưa
+    // thực sự hoàn tất khởi động.
+    // Fix: gọi onEnable/onDisable TRƯỚC, sau đó mới setEnabled() để notify GUI.
     public void toggle() {
-        setEnabled(!enabled);
-        if (enabled) onEnable();
-        else onDisable();
+        if (!enabled) {
+            onEnable();
+            setEnabled(true);
+        } else {
+            onDisable();
+            setEnabled(false);
+        }
     }
 
     public void triggerIfEnabled(int keyCode) {
         if (!enabled) return;
         if (keybind == -1 || keyCode != keybind) return;
-        if (running) return;
 
-        running = true;
-        new Thread(() -> {
+        // [FIX #2] compareAndSet: chỉ set true nếu hiện đang false → atomic,
+        // không thể có 2 thread cùng pass qua đây một lúc
+        if (!running.compareAndSet(false, true)) return;
+
+        Thread t = new Thread(() -> {
             try {
                 execute();
             } catch (InterruptedException ignored) {
@@ -50,13 +62,15 @@ public abstract class ClientModule {
             } catch (Exception e) {
                 System.err.println("[SentaiHex] Lỗi execute " + name + ": " + e.getMessage());
             } finally {
-                running = false;
+                running.set(false);
             }
-        }, name + "-Thread").start();
+        }, name + "-Thread");
+        t.setDaemon(true); // [FIX #3] daemon thread: không giữ JVM sống khi MC thoát
+        t.start();
     }
 
     public boolean isRunning() {
-        return running;
+        return running.get();
     }
 
     public String getName() { return name; }
@@ -72,7 +86,7 @@ public abstract class ClientModule {
     public int getKeybind() { return keybind; }
     public void setKeybind(int keybind) { this.keybind = keybind; }
 
-    // ====================== DELAY FUNCTIONS (MỚI THÊM) ======================
+    // ====================== DELAY FUNCTIONS ======================
 
     public int getGlobalDelay() {
         return globalDelay;
@@ -82,9 +96,6 @@ public abstract class ClientModule {
         this.globalDelay = Math.max(1, delay); // Không cho delay < 1ms
     }
 
-    /**
-     * Hàm chính bạn muốn: set delay cho macro
-     */
     public void setDelay(int ms) {
         setGlobalDelay(ms);
         System.out.println("[SentaiHex] " + name + " delay đã được đặt thành " + ms + "ms");

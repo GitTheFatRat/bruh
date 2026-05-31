@@ -319,10 +319,6 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
             body.add(buildSlotRow(m, "slot1", "Pearl"));
             body.add(Box.createVerticalStrut(4));
             body.add(buildSlotRow(m, "slot2", "Wind Charge"));
-        } else if (m instanceof MaceTech2) {
-            body.add(buildSlotRow(m, "slot1", "Axe"));
-            body.add(Box.createVerticalStrut(4));
-            body.add(buildSlotRow(m, "slot2", "Mace"));
         }
     }
 
@@ -473,11 +469,6 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
                 case "slot2" -> m.getSlotWindCharge();
                 default -> -1;
             };
-            case MaceTech2 m -> switch (slot) {
-                case "slot1" -> m.getSlotAxe();
-                case "slot2" -> m.getSlotMace();
-                default -> -1;
-            };
             default -> -1;
         };
     }
@@ -489,7 +480,6 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
                     case AnchorMacro  m -> m.setSlotAnchor(code);
                     case TNTCartMacro m -> m.setSlotRail(code);
                     case MaceTech1    m -> m.setSlotPearl(code);
-                    case MaceTech2    m -> m.setSlotAxe(code);
                     default -> {}
                 }
             }
@@ -498,7 +488,6 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
                     case AnchorMacro  m -> m.setSlotGlowstone(code);
                     case TNTCartMacro m -> m.setSlotCart(code);
                     case MaceTech1    m -> m.setSlotWindCharge(code);
-                    case MaceTech2    m -> m.setSlotMace(code);
                     default -> {}
                 }
             }
