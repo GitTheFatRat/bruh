@@ -10,60 +10,54 @@ public class AnchorMacro extends ClientModule {
     private int slotGlowstone = NativeKeyEvent.VC_C;
     private int slotTotem     = NativeKeyEvent.VC_TAB;
 
-    private int delay1 = 45;
-    private int delay2 = 60;
-    private int delay3 = 40;
+    // key+click gửi đồng thời trong 1 batch → server nhận đúng thứ tự
+    // delay chỉ cần đủ để server tick xử lý xong bước trước (1 tick = 50ms)
+    private int delay1 = 55;
+    private int delay2 = 55;
+    private int delay3 = 55;
 
     public AnchorMacro() {
-        super("Anchor Bomb", "Macro", NativeKeyEvent.VC_G); // Mặc định phím G
+        super("Anchor Bomb", "Macro", NativeKeyEvent.VC_G);
     }
 
     @Override
-    public void onEnable()  {
-        System.out.println("[SentaiHex] AnchorMacro ON - Keybind: " + getKeybindName());
-    }
-
+    public void onEnable()  { System.out.println("[SentaiHex] AnchorMacro ON - Keybind: " + getKeybindName()); }
     @Override
-    public void onDisable() {
-        System.out.println("[SentaiHex] AnchorMacro OFF");
-    }
+    public void onDisable() { System.out.println("[SentaiHex] AnchorMacro OFF"); }
 
     @Override
     public void execute() throws InterruptedException {
-        System.out.println("[AnchorMacro] === EXECUTE STARTED ==="); // Debug
+        // Gửi keydown+keyup+rightdown+rightup trong 1 SendInput call → không bao giờ lệch nhau
+        InputSimulator.pressKeyThenRightClick(InputSimulator.nativeToWinVK(slotAnchor));
+        Thread.sleep(delay1);
 
-        try {
-            InputSimulator.pressKey(InputSimulator.nativeToWinVK(slotAnchor));
-            Thread.sleep(delay1);
-            InputSimulator.rightClick();
-            Thread.sleep(delay1);
+        InputSimulator.pressKeyThenRightClick(InputSimulator.nativeToWinVK(slotGlowstone));
+        Thread.sleep(delay2);
 
-            InputSimulator.pressKey(InputSimulator.nativeToWinVK(slotGlowstone));
-            Thread.sleep(delay2);
-            InputSimulator.rightClick();
-            Thread.sleep(delay2);
-
-            InputSimulator.pressKey(InputSimulator.nativeToWinVK(slotTotem));
-            Thread.sleep(delay3);
-            InputSimulator.rightClick();
-            Thread.sleep(delay3);
-
-            System.out.println("[AnchorMacro] === EXECUTE FINISHED ===");
-        } catch (Exception e) {
-            System.err.println("[AnchorMacro] Lỗi: " + e.getMessage());
-        }
+        InputSimulator.pressKeyThenRightClick(InputSimulator.nativeToWinVK(slotTotem));
+        Thread.sleep(delay3);
     }
 
+    @Override
     public void setDelay(int ms) {
-        setGlobalDelay(ms);
-        delay1 = (int)(ms * 0.9);
-        delay2 = (int)(ms * 1.25);
-        delay3 = (int)(ms * 0.85);
-        System.out.println("[SentaiHex] Anchor delay set to " + ms + "ms");
+        int safe = Math.max(50, ms);
+        setGlobalDelay(safe);
+        this.delay1 = safe;
+        this.delay2 = safe;
+        this.delay3 = safe;
     }
 
-    // Giữ getter setter cũ
+    public int getSlotAnchor()          { return slotAnchor; }
+    public void setSlotAnchor(int k)    { this.slotAnchor = k; }
+    public int getSlotGlowstone()       { return slotGlowstone; }
+    public void setSlotGlowstone(int k) { this.slotGlowstone = k; }
+    public int getSlotTotem()           { return slotTotem; }
+    public void setSlotTotem(int k)     { this.slotTotem = k; }
+
     public int getDelay1() { return delay1; }
-    public void setDelay1(int d) { this.delay1 = Math.max(20, d); }
-    // ... (các getter setter khác giữ nguyên)
+    public void setDelay1(int d) { this.delay1 = Math.max(50, d); }
+    public int getDelay2() { return delay2; }
+    public void setDelay2(int d) { this.delay2 = Math.max(50, d); }
+    public int getDelay3() { return delay3; }
+    public void setDelay3(int d) { this.delay3 = Math.max(50, d); }
 }

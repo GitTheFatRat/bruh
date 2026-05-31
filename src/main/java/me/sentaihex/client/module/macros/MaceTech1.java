@@ -9,8 +9,8 @@ public class MaceTech1 extends ClientModule {
     private int slotPearl      = NativeKeyEvent.VC_V;
     private int slotWindCharge = NativeKeyEvent.VC_ALT;
 
-    private int delay1 = 150;
-    private int delay2 = 100;
+    private int delay1 = 30;  // giảm từ 150 → 30ms
+    private int delay2 = 25;  // giảm từ 100 → 25ms
 
     public MaceTech1() {
         super("Mace Tech 1 (Pearl+Wind)", "Macro", -1);
@@ -21,14 +21,18 @@ public class MaceTech1 extends ClientModule {
 
     @Override
     public void execute() throws InterruptedException {
-        InputSimulator.pressKey(InputSimulator.nativeToWinVK(slotPearl));
+        // Pearl
+        InputSimulator.keyDown(InputSimulator.nativeToWinVK(slotPearl));
         Thread.sleep(delay1);
         InputSimulator.rightClick();
-        Thread.sleep(50);
+        InputSimulator.keyUp(InputSimulator.nativeToWinVK(slotPearl));
+        Thread.sleep(delay1);
 
-        InputSimulator.pressKey(InputSimulator.nativeToWinVK(slotWindCharge));
+        // Wind Charge
+        InputSimulator.keyDown(InputSimulator.nativeToWinVK(slotWindCharge));
         Thread.sleep(delay2);
         InputSimulator.rightClick();
+        InputSimulator.keyUp(InputSimulator.nativeToWinVK(slotWindCharge));
     }
 
     public int getSlotPearl()            { return slotPearl; }

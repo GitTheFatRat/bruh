@@ -12,6 +12,58 @@ public class InputSimulator {
     private static final int MOUSEEVENTF_RIGHTDOWN = 0x0008;
     private static final int MOUSEEVENTF_RIGHTUP   = 0x0010;
 
+    // Gửi key + mouse trong một SendInput call duy nhất
+    // → đảm bảo thứ tự tuyệt đối, không bị Windows input queue xáo trộn
+    public static void pressKeyThenRightClick(int winVK) {
+        // toArray() cấp phát contiguous memory — bắt buộc với JNA struct array
+        WinUser.INPUT[] inputs = (WinUser.INPUT[]) new WinUser.INPUT().toArray(4);
+
+        inputs[0].type = new WinDef.DWORD(WinUser.INPUT.INPUT_KEYBOARD);
+        inputs[0].input.setType("ki");
+        inputs[0].input.ki.wVk = new WinDef.WORD(winVK);
+        inputs[0].input.ki.dwFlags = new WinDef.DWORD(0);
+
+        inputs[1].type = new WinDef.DWORD(WinUser.INPUT.INPUT_KEYBOARD);
+        inputs[1].input.setType("ki");
+        inputs[1].input.ki.wVk = new WinDef.WORD(winVK);
+        inputs[1].input.ki.dwFlags = new WinDef.DWORD(WinUser.KEYBDINPUT.KEYEVENTF_KEYUP);
+
+        inputs[2].type = new WinDef.DWORD(WinUser.INPUT.INPUT_MOUSE);
+        inputs[2].input.setType("mi");
+        inputs[2].input.mi.dwFlags = new WinDef.DWORD(MOUSEEVENTF_RIGHTDOWN);
+
+        inputs[3].type = new WinDef.DWORD(WinUser.INPUT.INPUT_MOUSE);
+        inputs[3].input.setType("mi");
+        inputs[3].input.mi.dwFlags = new WinDef.DWORD(MOUSEEVENTF_RIGHTUP);
+
+        User32.INSTANCE.SendInput(new WinDef.DWORD(4), inputs, inputs[0].size());
+    }
+
+    public static void pressKeyThenLeftClick(int winVK) {
+        WinUser.INPUT[] inputs = (WinUser.INPUT[]) new WinUser.INPUT().toArray(4);
+
+        inputs[0].type = new WinDef.DWORD(WinUser.INPUT.INPUT_KEYBOARD);
+        inputs[0].input.setType("ki");
+        inputs[0].input.ki.wVk = new WinDef.WORD(winVK);
+        inputs[0].input.ki.dwFlags = new WinDef.DWORD(0);
+
+        inputs[1].type = new WinDef.DWORD(WinUser.INPUT.INPUT_KEYBOARD);
+        inputs[1].input.setType("ki");
+        inputs[1].input.ki.wVk = new WinDef.WORD(winVK);
+        inputs[1].input.ki.dwFlags = new WinDef.DWORD(WinUser.KEYBDINPUT.KEYEVENTF_KEYUP);
+
+        inputs[2].type = new WinDef.DWORD(WinUser.INPUT.INPUT_MOUSE);
+        inputs[2].input.setType("mi");
+        inputs[2].input.mi.dwFlags = new WinDef.DWORD(MOUSEEVENTF_LEFTDOWN);
+
+        inputs[3].type = new WinDef.DWORD(WinUser.INPUT.INPUT_MOUSE);
+        inputs[3].input.setType("mi");
+        inputs[3].input.mi.dwFlags = new WinDef.DWORD(MOUSEEVENTF_LEFTUP);
+
+        User32.INSTANCE.SendInput(new WinDef.DWORD(4), inputs, inputs[0].size());
+    }
+
+    // Các method cũ giữ lại để tương thích
     public static void pressKey(int winVK) {
         keyDown(winVK);
         keyUp(winVK);
@@ -53,16 +105,8 @@ public class InputSimulator {
         User32.INSTANCE.SendInput(new WinDef.DWORD(1), new WinUser.INPUT[]{input}, input.size());
     }
 
-    /**
-     * Convert jnativehook VC scan code → Windows Virtual Key code.
-     *
-     * jnativehook dùng scan code kiểu PS/2 (KHÔNG phải ASCII, KHÔNG phải AWT keycode).
-     * Ví dụ: VC_2 = 0x0003, VC_X = 0x002D, VC_C = 0x002E — hoàn toàn khác ASCII.
-     * Mọi phím đều phải map tường minh.
-     */
     public static int nativeToWinVK(int vcCode) {
         return switch (vcCode) {
-            // --- Số ---
             case NativeKeyEvent.VC_0 -> 0x30;
             case NativeKeyEvent.VC_1 -> 0x31;
             case NativeKeyEvent.VC_2 -> 0x32;
@@ -73,7 +117,6 @@ public class InputSimulator {
             case NativeKeyEvent.VC_7 -> 0x37;
             case NativeKeyEvent.VC_8 -> 0x38;
             case NativeKeyEvent.VC_9 -> 0x39;
-            // --- Chữ cái A-Z ---
             case NativeKeyEvent.VC_A -> 0x41;
             case NativeKeyEvent.VC_B -> 0x42;
             case NativeKeyEvent.VC_C -> 0x43;
@@ -100,7 +143,6 @@ public class InputSimulator {
             case NativeKeyEvent.VC_X -> 0x58;
             case NativeKeyEvent.VC_Y -> 0x59;
             case NativeKeyEvent.VC_Z -> 0x5A;
-            // --- Function keys ---
             case NativeKeyEvent.VC_F1  -> 0x70;
             case NativeKeyEvent.VC_F2  -> 0x71;
             case NativeKeyEvent.VC_F3  -> 0x72;
@@ -113,7 +155,6 @@ public class InputSimulator {
             case NativeKeyEvent.VC_F10 -> 0x79;
             case NativeKeyEvent.VC_F11 -> 0x7A;
             case NativeKeyEvent.VC_F12 -> 0x7B;
-            // --- Phím đặc biệt ---
             case NativeKeyEvent.VC_ESCAPE    -> 0x1B;
             case NativeKeyEvent.VC_TAB       -> 0x09;
             case NativeKeyEvent.VC_ENTER     -> 0x0D;
@@ -129,7 +170,6 @@ public class InputSimulator {
             case NativeKeyEvent.VC_UP        -> 0x26;
             case NativeKeyEvent.VC_RIGHT     -> 0x27;
             case NativeKeyEvent.VC_DOWN      -> 0x28;
-            // --- Modifier ---
             case NativeKeyEvent.VC_SHIFT   -> 0x10;
             case NativeKeyEvent.VC_CONTROL -> 0x11;
             case NativeKeyEvent.VC_ALT     -> 0x12;

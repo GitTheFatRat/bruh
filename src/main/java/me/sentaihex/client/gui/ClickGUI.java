@@ -11,6 +11,7 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.*;
+import javax.swing.JTextField;
 import java.awt.geom.RoundRectangle2D;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -81,7 +82,6 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
         if (mouseHelper == null) return;
         try {
             for (Method method : mouseHelper.getClass().getDeclaredMethods()) {
-                method.setAccessible(true);
                 String name = method.getName().toLowerCase();
                 if (name.contains(keyword) && method.getParameterCount() == 0) {
                     method.invoke(mouseHelper);
@@ -157,7 +157,7 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
         header.setOpaque(false);
         header.setPreferredSize(new Dimension(850, 65));
 
-        JLabel title = new JLabel("🔱 Thượng đỉnh, thượng hạng 🔱", SwingConstants.CENTER);
+        JLabel title = new JLabel("Release Soon", SwingConstants.CENTER);
         title.setFont(new Font(FONT_NAME, Font.BOLD, 18));
         title.setForeground(ACCENT);
         header.add(title, BorderLayout.CENTER);
@@ -233,15 +233,16 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
             body.add(createSlotRow(m, "slot3", "Totem"));
         } else if (m instanceof TNTCartMacro) {
             body.add(createSlotRow(m, "slot1", "Rail"));
-            body.add(createSlotRow(m, "slot2", "Cart"));   // Fix: "Tnt" → "Cart" cho đúng nghĩa
+            body.add(createSlotRow(m, "slot2", "Cart"));
             body.add(createSlotRow(m, "slot3", "Crossbow"));
         } else if (m instanceof MaceTech1) {
-            body.add(createSlotRow(m, "slot1", "Pearl"));      // [FIX #3] slot1 = Pearl (không phải Mace)
+            body.add(createSlotRow(m, "slot1", "Pearl"));
             body.add(createSlotRow(m, "slot2", "Wind"));
         } else if (m instanceof MaceTech2) {
-            body.add(createSlotRow(m, "slot1", "Mace"));       // [FIX #3] slot1 = Mace, slot2 = Axe
-            body.add(createSlotRow(m, "slot2", "Axe"));
+            body.add(createSlotRow(m, "slot1", "Axe"));
+            body.add(createSlotRow(m, "slot2", "Mace"));
         }
+        body.add(createDelayRow(m));
     }
 
     private JLabel createNameLabel(ClientModule m) {
@@ -343,6 +344,57 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
         return container;
     }
 
+    private JPanel createDelayRow(ClientModule m) {
+        JPanel row = new JPanel(new BorderLayout());
+        row.setOpaque(false);
+        row.setMaximumSize(new Dimension(200, 32));
+        row.setBorder(new EmptyBorder(4, 0, 4, 0));
+
+        JLabel nameLbl = new JLabel("Delay");
+        nameLbl.setFont(new Font(FONT_NAME, Font.PLAIN, 13));
+        nameLbl.setForeground(TEXT_LIGHT);
+        row.add(nameLbl, BorderLayout.WEST);
+
+        JTextField delayField = new JTextField(String.valueOf(m.getGlobalDelay()), 4);
+        delayField.setFont(new Font(FONT_NAME, Font.BOLD, 12));
+        delayField.setForeground(ACCENT);
+        delayField.setBackground(new Color(10, 40, 20));
+        delayField.setBorder(BorderFactory.createLineBorder(BORDER));
+        delayField.setHorizontalAlignment(JTextField.CENTER);
+        delayField.setMaximumSize(new Dimension(55, 24));
+        delayField.setPreferredSize(new Dimension(55, 24));
+
+        JLabel msLbl = new JLabel("ms");
+        msLbl.setFont(new Font(FONT_NAME, Font.PLAIN, 11));
+        msLbl.setForeground(MUTED);
+
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
+        right.setOpaque(false);
+        right.add(delayField);
+        right.add(msLbl);
+        row.add(right, BorderLayout.EAST);
+
+        // Áp dụng khi nhấn Enter hoặc mất focus
+        Runnable applyDelay = () -> {
+            try {
+                int ms = Integer.parseInt(delayField.getText().trim());
+                if (ms < 1) ms = 1;
+                m.setDelay(ms);
+                delayField.setText(String.valueOf(m.getGlobalDelay()));
+                delayField.setForeground(ACCENT);
+                SentaiHex.INSTANCE.configManager.save();
+            } catch (NumberFormatException ex) {
+                delayField.setForeground(Color.RED);
+            }
+        };
+        delayField.addActionListener(e -> applyDelay.run());
+        delayField.addFocusListener(new FocusAdapter() {
+            @Override public void focusLost(FocusEvent e) { applyDelay.run(); }
+        });
+
+        return row;
+    }
+
     private JPanel createEmptyCard() {
         JPanel card = new JPanel();
         card.setOpaque(false);
@@ -369,8 +421,8 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
                 default -> -1;
             };
             case MaceTech2 m -> switch (slotName) {
-                case "slot1" -> m.getSlotMace();
-                case "slot2" -> m.getSlotAxe();
+                case "slot1" -> m.getSlotAxe();
+                case "slot2" -> m.getSlotMace();
                 default -> -1;
             };
             default -> -1;
@@ -428,11 +480,7 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
             return;
         }
 
-        // Trigger combo nếu module đang ON — ModuleManager xử lý, GUI không can thiệp
-        // (ClickGUI cũng là NativeKeyListener nên phải forward xuống ModuleManager)
-        for (ClientModule m : SentaiHex.INSTANCE.moduleManager.getModules()) {
-            m.triggerIfEnabled(code);
-        }
+        // ModuleManager đã xử lý triggerIfEnabled rồi — ClickGUI không cần gọi lại
     }
 
     private void updateModuleSlotKey(ClientModule module, String slot, int keyCode) {
@@ -451,7 +499,7 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
                     case AnchorMacro  m -> m.setSlotGlowstone(keyCode);
                     case TNTCartMacro m -> m.setSlotCart(keyCode);
                     case MaceTech1    m -> m.setSlotWindCharge(keyCode);
-                    case MaceTech2    m -> m.setSlotAxe(keyCode);
+                    case MaceTech2    m -> m.setSlotMace(keyCode);
                     default -> {}
                 }
             }
