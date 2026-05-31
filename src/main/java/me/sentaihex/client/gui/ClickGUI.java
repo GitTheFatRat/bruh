@@ -6,6 +6,8 @@ import com.github.kwhat.jnativehook.keyboard.NativeKeyListener;
 import me.sentaihex.client.SentaiHex;
 import me.sentaihex.client.module.ClientModule;
 import me.sentaihex.client.module.macros.*;
+import me.sentaihex.client.module.function.Trigger;
+import me.sentaihex.client.module.function.StunSlam;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -190,8 +192,26 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
             listPanel.add(buildMacroCard(macros.get(i)), gbc);
         }
 
-        // Glue để đẩy content lên trên
-        gbc.gridy = macros.size() + 1;
+        // Section FUNCTIONS
+        java.util.List<ClientModule> functions = SentaiHex.INSTANCE.moduleManager.getByCategory("Function");
+        if (!functions.isEmpty()) {
+            JLabel funcLabel = new JLabel("  FUNCTIONS");
+            funcLabel.setFont(new Font(FONT, Font.BOLD, 10));
+            funcLabel.setForeground(new Color(255, 160, 80));
+            funcLabel.setBorder(new EmptyBorder(12, 4, 8, 0));
+            gbc.gridy = macros.size() + 1;
+            gbc.insets = new Insets(0, 0, 0, 0);
+            listPanel.add(funcLabel, gbc);
+            for (int i = 0; i < functions.size(); i++) {
+                gbc.gridy = macros.size() + 2 + i;
+                gbc.insets = new Insets(0, 0, i < functions.size() - 1 ? 10 : 0, 0);
+                listPanel.add(buildFunctionCard(functions.get(i)), gbc);
+            }
+        }
+
+        // Glue
+        int glueRow = macros.size() + 1 + (functions.isEmpty() ? 0 : functions.size() + 1) + 1;
+        gbc.gridy = glueRow;
         gbc.weighty = 1.0;
         gbc.insets = new Insets(0, 0, 0, 0);
         listPanel.add(Box.createVerticalGlue(), gbc);
@@ -205,6 +225,192 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
         scroll.getVerticalScrollBar().setOpaque(false);
         scroll.getVerticalScrollBar().setPreferredSize(new Dimension(4, 0));
         return scroll;
+    }
+
+    // ─── FUNCTION CARD ────────────────────────────────────────────────────────
+    private static final Color FUNC_CARD   = new Color(255, 140, 60, 18);
+    private static final Color FUNC_BORDER = new Color(255, 140, 60, 60);
+    private static final Color FUNC_HOVER  = new Color(255, 140, 60, 30);
+    private static final Color FUNC_ACCENT = new Color(255, 160, 80);
+
+    private JPanel buildFunctionCard(ClientModule m) {
+        JPanel card = new JPanel() {
+            boolean hovered = false;
+            {
+                addMouseListener(new MouseAdapter() {
+                    @Override public void mouseEntered(MouseEvent e) { hovered = true;  repaint(); }
+                    @Override public void mouseExited(MouseEvent e)  { hovered = false; repaint(); }
+                });
+            }
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(hovered ? FUNC_HOVER : FUNC_CARD);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), RADIUS, RADIUS);
+                g2.setColor(FUNC_BORDER);
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, RADIUS, RADIUS);
+                g2.dispose();
+            }
+        };
+        card.setOpaque(false);
+        card.setLayout(new BorderLayout(0, 0));
+        card.setBorder(new EmptyBorder(14, 16, 14, 16));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 999));
+        card.setMinimumSize(new Dimension(100, 50));
+        card.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JPanel topRow = new JPanel(new BorderLayout());
+        topRow.setOpaque(false);
+        JLabel nameLabel = new JLabel(m.getName());
+        nameLabel.setFont(new Font(FONT, Font.BOLD, 14));
+        nameLabel.setForeground(TEXT_MAIN);
+        topRow.add(nameLabel, BorderLayout.WEST);
+        topRow.add(buildToggleFn(m), BorderLayout.EAST);
+        card.add(topRow, BorderLayout.NORTH);
+
+        JPanel body = new JPanel();
+        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+        body.setOpaque(false);
+        body.setBorder(new EmptyBorder(10, 0, 0, 0));
+
+        if (m instanceof StunSlam s) {
+            body.add(buildSlotRowFn(m, "slot1", "Axe"));
+            body.add(Box.createVerticalStrut(4));
+            body.add(buildSlotRowFn(m, "slot2", "Mace"));
+            body.add(Box.createVerticalStrut(6));
+        }
+        body.add(buildDelayRowFn(m));
+        body.add(Box.createVerticalStrut(6));
+        body.add(buildBindRowFn(m));
+
+        card.add(body, BorderLayout.CENTER);
+        return card;
+    }
+
+    private JComponent buildToggleFn(ClientModule m) {
+        JButton toggle = new JButton() {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(m.isEnabled() ? FUNC_ACCENT : TOGGLE_OFF);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), getHeight(), getHeight());
+                g2.setColor(new Color(255, 255, 255, 220));
+                int knob = getHeight() - 4;
+                int x = m.isEnabled() ? getWidth() - knob - 2 : 2;
+                g2.fillOval(x, 2, knob, knob);
+                g2.dispose();
+            }
+        };
+        toggle.setPreferredSize(new Dimension(42, 22));
+        toggle.setContentAreaFilled(false);
+        toggle.setBorderPainted(false);
+        toggle.setFocusPainted(false);
+        toggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        toggle.addActionListener(e -> { m.toggle(); toggle.repaint(); SentaiHex.INSTANCE.configManager.save(); });
+        m.addPropertyChangeListener(evt -> { if ("enabled".equals(evt.getPropertyName())) SwingUtilities.invokeLater(toggle::repaint); });
+        return toggle;
+    }
+
+    private JPanel buildSlotRowFn(ClientModule module, String slotName, String label) {
+        JPanel row = new JPanel(new BorderLayout(8, 0));
+        row.setOpaque(false);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel lbl = new JLabel(label);
+        lbl.setFont(new Font(FONT, Font.PLAIN, 12));
+        lbl.setForeground(TEXT_MUTED);
+        row.add(lbl, BorderLayout.WEST);
+        row.add(buildBindBtnFn(module, slotName), BorderLayout.EAST);
+        return row;
+    }
+
+    private JPanel buildDelayRowFn(ClientModule m) {
+        JPanel row = new JPanel(new BorderLayout(8, 0));
+        row.setOpaque(false);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel lbl = new JLabel("Delay");
+        lbl.setFont(new Font(FONT, Font.PLAIN, 12));
+        lbl.setForeground(TEXT_MUTED);
+        row.add(lbl, BorderLayout.WEST);
+
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
+        right.setOpaque(false);
+        JTextField field = new JTextField(String.valueOf(m.getGlobalDelay()), 4);
+        field.setFont(new Font(FONT, Font.BOLD, 12));
+        field.setForeground(FUNC_ACCENT);
+        field.setBackground(new Color(30, 15, 5));
+        field.setBorder(BorderFactory.createLineBorder(FUNC_BORDER));
+        field.setHorizontalAlignment(JTextField.CENTER);
+        field.setPreferredSize(new Dimension(52, 24));
+        JLabel ms = new JLabel("ms");
+        ms.setFont(new Font(FONT, Font.PLAIN, 11));
+        ms.setForeground(TEXT_MUTED);
+        Runnable apply = () -> {
+            try {
+                int val = Integer.parseInt(field.getText().trim());
+                m.setDelay(val);
+                field.setText(String.valueOf(m.getGlobalDelay()));
+                field.setForeground(FUNC_ACCENT);
+                SentaiHex.INSTANCE.configManager.save();
+            } catch (NumberFormatException ex) { field.setForeground(DANGER); }
+        };
+        field.addActionListener(e -> apply.run());
+        field.addFocusListener(new FocusAdapter() { @Override public void focusLost(FocusEvent e) { apply.run(); } });
+        right.add(field); right.add(ms);
+        row.add(right, BorderLayout.EAST);
+        return row;
+    }
+
+    private JPanel buildBindRowFn(ClientModule m) {
+        JPanel row = new JPanel(new BorderLayout(8, 0));
+        row.setOpaque(false);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel lbl = new JLabel("Toggle");
+        lbl.setFont(new Font(FONT, Font.PLAIN, 12));
+        lbl.setForeground(TEXT_MUTED);
+        row.add(lbl, BorderLayout.WEST);
+        row.add(buildBindBtnFn(m, "mainBind"), BorderLayout.EAST);
+        return row;
+    }
+
+    private JButton buildBindBtnFn(ClientModule module, String slotName) {
+        int cur = slotName.equals("mainBind") ? module.getKeybind() : getSlotKeyFn(module, slotName);
+        String txt = cur == -1 ? "—" : formatKey(NativeKeyEvent.getKeyText(cur));
+        JButton btn = new JButton(txt);
+        btn.setFont(new Font(FONT, Font.BOLD, 11));
+        btn.setForeground(FUNC_ACCENT);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setPreferredSize(new Dimension(64, 24));
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.addActionListener(e -> {
+            listeningModule = module; listeningSlot = slotName; listeningBtn = btn;
+            btn.setText("..."); btn.setForeground(DANGER); btn.repaint();
+        });
+        return btn;
+    }
+
+    private int getSlotKeyFn(ClientModule module, String slot) {
+        if (module instanceof StunSlam s) {
+            return switch (slot) {
+                case "slot1" -> s.getSlotAxe();
+                case "slot2" -> s.getSlotMace();
+                default -> -1;
+            };
+        }
+        return -1;
+    }
+
+    private void setSlotKeyFn(ClientModule module, String slot, int code) {
+        if (module instanceof StunSlam s) {
+            switch (slot) {
+                case "slot1" -> s.setSlotAxe(code);
+                case "slot2" -> s.setSlotMace(code);
+            }
+        }
     }
 
     // ─── MACRO CARD ────────────────────────────────────────────────────────────
@@ -582,6 +788,7 @@ public class ClickGUI extends JFrame implements NativeKeyListener {
             final String keyTxt = formatKey(NativeKeyEvent.getKeyText(code));
             SwingUtilities.invokeLater(() -> {
                 if (slot.equals("mainBind")) mod.setKeybind(code);
+                else if ("Function".equals(mod.getCategory())) setSlotKeyFn(mod, slot, code);
                 else setSlotKey(mod, slot, code);
                 btn.setText(keyTxt);
                 btn.setForeground(ACCENT);

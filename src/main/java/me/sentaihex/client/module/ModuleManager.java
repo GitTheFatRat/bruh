@@ -6,6 +6,8 @@ import com.github.kwhat.jnativehook.keyboard.NativeKeyListener;
 import me.sentaihex.client.module.macros.AnchorMacro;
 import me.sentaihex.client.module.macros.MaceTech1;
 import me.sentaihex.client.module.macros.TNTCartMacro;
+import me.sentaihex.client.module.function.Trigger;
+import me.sentaihex.client.module.function.StunSlam;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,22 +20,27 @@ public class ModuleManager implements NativeKeyListener {
         register(new AnchorMacro());
         register(new TNTCartMacro());
         register(new MaceTech1());
+        register(new Trigger());
+        register(new StunSlam());
 
         GlobalScreen.addNativeKeyListener(this);
         System.out.println("[SentaiHex] ModuleManager loaded " + modules.size() + " modules");
     }
 
-    private void register(ClientModule module) {
-        modules.add(module);
-    }
+    private void register(ClientModule module) { modules.add(module); }
 
     @Override
     public void nativeKeyPressed(NativeKeyEvent e) {
         int code = e.getKeyCode();
         for (ClientModule m : modules) {
-            // Mỗi module tự kiểm tra:
-            // - Nếu code là keybind (trigger) VÀ module đang ON → chạy combo
-            m.triggerIfEnabled(code);
+            if (m.getKeybind() != code) continue;
+            if ("Function".equals(m.getCategory())) {
+                // Function module: keybind toggle bật/tắt loop
+                m.toggle();
+            } else {
+                // Macro module: keybind trigger execute một lần
+                m.triggerIfEnabled(code);
+            }
         }
     }
 
@@ -44,16 +51,14 @@ public class ModuleManager implements NativeKeyListener {
 
     public List<ClientModule> getByCategory(String category) {
         List<ClientModule> result = new ArrayList<>();
-        for (ClientModule m : modules) {
+        for (ClientModule m : modules)
             if (m.getCategory().equals(category)) result.add(m);
-        }
         return result;
     }
 
     public ClientModule getByName(String name) {
-        for (ClientModule m : modules) {
+        for (ClientModule m : modules)
             if (m.getName().equalsIgnoreCase(name)) return m;
-        }
         return null;
     }
 }

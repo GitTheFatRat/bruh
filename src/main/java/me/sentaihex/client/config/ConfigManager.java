@@ -16,16 +16,16 @@ public class ConfigManager {
 
     // [FIX #4] Danh sách tên getter/setter của các slot key cần lưu — thêm vào đây nếu có macro mới
     private static final String[] SLOT_GETTERS = {
-        "getSlotAnchor", "getSlotGlowstone", "getSlotTotem",  // AnchorMacro
-        "getSlotRail",   "getSlotCart",      "getSlotCrossbow", // TNTCartMacro
-        "getSlotPearl",  "getSlotWindCharge",                   // MaceTech1
-        "getSlotMace",   "getSlotAxe"                           // MaceTech2
+            "getSlotAnchor", "getSlotGlowstone", "getSlotTotem",  // AnchorMacro
+            "getSlotRail",   "getSlotCart",      "getSlotCrossbow", // TNTCartMacro
+            "getSlotPearl",  "getSlotWindCharge",                   // MaceTech1
+            "getSlotAxe",    "getSlotMace"                          // StunSlam
     };
     private static final String[] SLOT_SETTERS = {
-        "setSlotAnchor", "setSlotGlowstone", "setSlotTotem",
-        "setSlotRail",   "setSlotCart",      "setSlotCrossbow",
-        "setSlotPearl",  "setSlotWindCharge",
-        "setSlotMace",   "setSlotAxe"
+            "setSlotAnchor", "setSlotGlowstone", "setSlotTotem",
+            "setSlotRail",   "setSlotCart",      "setSlotCrossbow",
+            "setSlotPearl",  "setSlotWindCharge",
+            "setSlotAxe",    "setSlotMace"
     };
 
     public void save() {
