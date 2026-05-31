@@ -108,7 +108,7 @@ public class Launcher extends JFrame {
         btnRow.add(Box.createHorizontalStrut(10));
         btnRow.add(injectBtn);
 
-        JLabel info = new JLabel("// Ho tro: Vanilla, Lunar, Feather, Badlion, PVP Legacy");
+        JLabel info = new JLabel("// Ho tro: Lunar, Feather, Legacy, Modrinth, Prism, Badlion | 1.20.4 - 1.21.1");
         info.setFont(new Font("Courier New", Font.PLAIN, 10));
         info.setForeground(new Color(40, 70, 55));
         info.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -156,18 +156,36 @@ public class Launcher extends JFrame {
                 String name = vmd.displayName().toLowerCase();
                 // ✅ Fix: thêm mcProcesses.add(vmd) đúng chỗ
                 if (name.contains("minecraft")
+                        // Lunar Client
                         || name.contains("lunar")
-                        || name.contains("feather")
-                        || name.contains("badlion")
-                        || name.contains("pvplegacy")
-                        || name.contains("labymod")
-                        || name.contains("net.minecraft")
                         || name.contains("com.moonsworth")
+                        || name.contains("lunarclient")
+                        // Feather Client
+                        || name.contains("feather")
                         || name.contains("gg.essential")
+                        // Legacy Launcher (официальный лаунчер / tlauncher / legacy)
+                        || name.contains("legacy")
+                        || name.contains("legacylauncher")
+                        || name.contains("tlauncher")
+                        // Modrinth App
+                        || name.contains("modrinth")
+                        || name.contains("theseus")
+                        // Prism Launcher
+                        || name.contains("prism")
+                        || name.contains("prismlauncher")
+                        || name.contains("org.prismlauncher")
+                        // Badlion
+                        || name.contains("badlion")
                         || name.contains("digitalingot")
-                        || name.contains("rustextension")
                         || name.contains("net.digitalingot")
-                        || name.contains("proxiedstart")) {
+                        // LabyMod
+                        || name.contains("labymod")
+                        // PVP Legacy
+                        || name.contains("pvplegacy")
+                        || name.contains("proxiedstart")
+                        || name.contains("rustextension")
+                        // Generic fallback
+                        || name.contains("net.minecraft")) {
                     mcProcesses.add(vmd); // ✅ BUG FIX: dòng này bị thiếu trong code cũ!
                 }
             }
@@ -182,7 +200,7 @@ public class Launcher extends JFrame {
                         if (label.length() > 60) label = label.substring(0, 60) + "...";
                         processCombo.addItem(label);
                     }
-                    statusLabel.setText("// Tim thay " + mcProcesses.size() + " process!");
+                    statusLabel.setText("// Tim thay " + mcProcesses.size() + " process [1.20.4-1.21.1]");
                     statusLabel.setForeground(ACCENT);
                 }
             });
@@ -242,7 +260,7 @@ public class Launcher extends JFrame {
         panel.setBackground(PANEL_BG);
         panel.setBorder(BorderFactory.createLineBorder(ACCENT, 1));
 
-        JLabel msg = new JLabel("INJECTED - Nhan INSERT trong game de mo GUI", SwingConstants.CENTER);
+        JLabel msg = new JLabel("INJECTED OK [1.20.4-1.21.1] - Nhan INSERT de mo GUI", SwingConstants.CENTER);
         msg.setFont(new Font("Courier New", Font.BOLD, 11));
         msg.setForeground(ACCENT);
 
